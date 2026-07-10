@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Global HDI × Explainable AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B1F33;
+    --ink-soft:#132B45;
+    --ink-softer:#1C3A57;
+    --paper:#F3EEE2;
+    --paper-dim:#E7E0CE;
+    --amber:#E8A23D;
+    --teal:#E8A23D;
+    --text-light:#F3EEE2;
+    --text-dim:#9FB3C4;
+    --text-dark:#101C28;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  html{scroll-behavior:smooth;}
+
+  body{
+    background:var(--ink);
+    color:var(--text-light);
+    font-family:'Inter',sans-serif;
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  ::selection{ background:var(--amber); color:var(--text-dark); }
+
+  :focus-visible{
+    outline:2px solid var(--amber);
+    outline-offset:3px;
+    border-radius:2px;
+  }
+
+  /* ---------- ambient moving background ---------- */
+  .bg-field{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    overflow:hidden;
+  }
+  .bg-field svg{
+    position:absolute; top:50%; left:50%;
+    width:min(1700px, 240vw); height:min(1700px, 240vw);
+    transform:translate(-50%,-50%);
+  }
+  .bg-drift{ animation:bgspin 50s linear infinite; transform-origin:center; }
+  @keyframes bgspin{ to{ transform:rotate(360deg); } }
+  .bg-drift-rev{ animation:bgspin-rev 75s linear infinite; transform-origin:center; }
+  @keyframes bgspin-rev{ to{ transform:rotate(-360deg); } }
+  .bg-blob{
+    position:absolute; border-radius:50%;
+    filter:blur(80px); opacity:0.32;
+    animation:blobfloat 20s ease-in-out infinite;
+  }
+  .bg-blob.one{ width:480px; height:480px; background:var(--teal); top:-10%; left:-8%; }
+  .bg-blob.two{ width:420px; height:420px; background:var(--amber); bottom:-12%; right:-6%; animation-delay:-6s; animation-duration:24s; }
+  .bg-blob.three{ width:360px; height:360px; background:var(--ink-softer); top:40%; left:58%; animation-delay:-11s; animation-duration:18s; opacity:0.4; }
+  @keyframes blobfloat{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    33%{ transform:translate(90px,-70px) scale(1.15); }
+    66%{ transform:translate(-70px,60px) scale(0.9); }
+  }
+
+  /* individual floating particles rising through the whole page */
+  .bg-particle{
+    position:absolute; bottom:-6%; border-radius:50%;
+    animation:particleRise linear infinite;
+    will-change:transform, opacity;
+  }
+  @keyframes particleRise{
+    0%{ transform:translate(0,0); opacity:0; }
+    8%{ opacity:1; }
+    88%{ opacity:1; }
+    100%{ transform:translate(var(--drift, 40px), -112vh); opacity:0; }
+  }
+
+  /* a signature large shape that floats diagonally across the whole viewport */
+  .bg-signature{
+    position:absolute; top:60%; left:-14%;
+    width:min(46vw, 620px); height:min(46vw, 620px);
+    animation:signatureFloat 55s ease-in-out infinite;
+    opacity:0.4;
+  }
+  @keyframes signatureFloat{
+    0%{ transform:translate(0,0) rotate(0deg); }
+    50%{ transform:translate(46vw, -46vh) rotate(180deg); }
+    100%{ transform:translate(0,0) rotate(360deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .bg-drift, .bg-drift-rev, .bg-blob, .bg-particle, .bg-signature{ animation:none !important; }
+  }
+
+  header, .hero, section, footer{ position:relative; z-index:1; }
+
+  /* ---------- scroll reveal ---------- */
+  .reveal{
+    opacity:0; transform:translateY(22px);
+    transition:opacity 0.7s cubic-bezier(.2,.7,.3,1), transform 0.7s cubic-bezier(.2,.7,.3,1);
+  }
+  .reveal.is-visible{ opacity:1; transform:translateY(0); }
+  .reveal-stagger.is-visible > *{ transition-delay:calc(var(--i, 0) * 90ms); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  a{color:inherit;text-decoration:none;}
+
+  .display{font-family:'Fraunces',serif;}
+
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.72rem;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--amber);
+  }
+
+  /* ---------- highlighter mark ---------- */
+  .mark{position:relative; white-space:nowrap;}
+  .mark svg{
+    position:absolute; left:-2%; bottom:-0.08em; width:104%; height:0.5em;
+    z-index:-1; overflow:visible;
+  }
+  .mark svg path{
+    stroke:var(--amber);
+    stroke-width:14;
+    fill:none;
+    stroke-linecap:round;
+    stroke-dasharray:400;
+    stroke-dashoffset:400;
+    animation:draw 0.9s ease forwards 0.5s;
+    opacity:0.55;
+  }
+  @keyframes draw{ to{ stroke-dashoffset:0; } }
+
+  /* ---------- nav ---------- */
+  header{
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 48px;
+    background:linear-gradient(to bottom, rgba(11,31,51,0.92), rgba(11,31,51,0));
+    backdrop-filter:blur(2px);
+    transition:background 0.35s ease, padding 0.35s ease, box-shadow 0.35s ease;
+  }
+  header.scrolled{
+    background:rgba(11,31,51,0.88);
+    padding:14px 48px;
+    box-shadow:0 1px 0 rgba(243,238,226,0.08), 0 20px 40px -30px rgba(0,0,0,0.6);
+  }
+
+  .nav-toggle{
+    display:none; width:36px; height:36px; border:none; background:none;
+    cursor:pointer; flex-direction:column; justify-content:center; gap:5px; padding:0;
+  }
+  .nav-toggle span{ width:100%; height:1.5px; background:var(--paper); transition:transform 0.25s, opacity 0.25s; }
+  .nav-toggle.open span:nth-child(1){ transform:translateY(6.5px) rotate(45deg); }
+  .nav-toggle.open span:nth-child(2){ opacity:0; }
+  .nav-toggle.open span:nth-child(3){ transform:translateY(-6.5px) rotate(-45deg); }
+  .brand{display:flex; align-items:center; gap:11px;}
+  .brand-mark{
+    width:30px; height:30px; border-radius:50%;
+    border:1.5px solid var(--amber);
+    position:relative;
+    flex-shrink:0;
+  }
+  .brand-mark::before, .brand-mark::after{
+    content:''; position:absolute; border:1px solid var(--teal); border-radius:50%; opacity:0.7;
+  }
+  .brand-mark::before{ inset:5px 0; border-left:none; border-right:none; }
+  .brand-mark::after{ inset:0 5px; border-top:none; border-bottom:none; }
+  .brand-name{font-family:'Fraunces',serif; font-size:1rem; font-weight:500; letter-spacing:0.01em;}
+  .brand-name span{color:var(--text-dim); font-weight:300; font-style:italic;}
+
+  nav ul{display:flex; align-items:center; gap:36px; list-style:none;}
+  nav a{
+    font-size:0.85rem; color:var(--text-dim); font-weight:500;
+    transition:color 0.2s;
+  }
+  nav a:hover{color:var(--paper);}
+
+  /* ---------- standout Start button in nav ---------- */
+  nav a.nav-cta{
+    display:inline-flex; align-items:center;
+    background:var(--amber); color:var(--text-dark) !important;
+    font-weight:600;
+    padding:9px 22px;
+    border-radius:30px;
+    box-shadow:0 4px 16px -4px rgba(232,162,61,0.65);
+    transition:transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  }
+  nav a.nav-cta:hover{
+    background:#F0B15C;
+    transform:translateY(-2px);
+    box-shadow:0 8px 20px -4px rgba(232,162,61,0.8);
+  }
+  nav a.nav-cta:focus-visible{ outline-offset:3px; }
+
+  /* ---------- hero ---------- */
+  .hero{
+    min-height:100vh;
+    display:flex; align-items:center;
+    padding:140px 48px 80px;
+    position:relative;
+  }
+  .hero-inner{
+    display:grid; grid-template-columns:1.1fr 0.9fr; gap:64px; align-items:center;
+    max-width:1280px; margin:0 auto; width:100%;
+  }
+  .hero h1{
+    font-size:clamp(2.4rem, 4.4vw, 4rem);
+    font-weight:500;
+    line-height:1.08;
+    letter-spacing:-0.01em;
+    margin-bottom:26px;
+  }
+  .hero h1 em{font-style:italic; font-weight:300; color:var(--teal);}
+  .hero p.lede{
+    font-size:1.05rem; line-height:1.65; color:var(--text-dim);
+    max-width:46ch; margin-bottom:36px;
+  }
+  .hero-stats{display:flex; gap:40px; margin-top:8px;}
+  .hero-stat .num{font-family:'Fraunces',serif; font-size:2rem; color:var(--paper);}
+  .hero-stat .lbl{font-size:0.75rem; color:var(--text-dim); margin-top:2px;}
+
+  .hero-fade{ opacity:0; transform:translateY(16px); animation:heroIn 0.8s cubic-bezier(.2,.7,.3,1) forwards; }
+  @keyframes heroIn{ to{ opacity:1; transform:translateY(0); } }
+  @media (prefers-reduced-motion: reduce){ .hero-fade{ animation:none; opacity:1; transform:none; } }
+
+  /* dot globe */
+  .globe-wrap{
+    position:relative; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center;
+  }
+  .globe-wrap svg{width:100%; height:100%; max-width:440px;}
+  .globe-ring{animation:spin 60s linear infinite; transform-origin:center;}
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .pulse-dot{ animation:pulse 2.6s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:0.35;} 50%{opacity:1;} }
+
+  /* ---------- section shell ---------- */
+  section{padding:100px 48px;}
+  .section-inner{max-width:1280px; margin:0 auto;}
+  .section-head{max-width:640px; margin-bottom:56px;}
+  .section-head h2{
+    font-family:'Fraunces',serif; font-weight:500;
+    font-size:clamp(1.8rem, 3vw, 2.5rem);
+    margin-top:12px; line-height:1.15;
+  }
+
+  /* ---------- paths (moved up, front and center) ---------- */
+  .paths{
+    background:var(--paper); color:var(--text-dark);
+    padding:80px 48px 100px;
+    border-top:1px solid rgba(11,31,51,0.06);
+    border-bottom:1px solid rgba(11,31,51,0.06);
+  }
+  .paths .eyebrow{color:#B97A1F;}
+  .paths-intro{ text-align:center; max-width:560px; margin:0 auto 48px; }
+  .paths-intro h2{
+    font-family:'Fraunces',serif; font-weight:500;
+    font-size:clamp(1.7rem, 2.8vw, 2.3rem); margin-top:10px; line-height:1.2;
+  }
+  .paths-intro p{color:#4C5A66; margin-top:12px; font-size:0.98rem;}
+
+  .path-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:24px;
+    max-width:1000px; margin:0 auto;
+  }
+  .path-card{
+    background:var(--ink);
+    color:var(--text-light);
+    border-radius:6px;
+    padding:40px 36px;
+    position:relative;
+    overflow:hidden;
+    display:flex; flex-direction:column;
+    text-align:left;
+    cursor:pointer;
+    border:1px solid transparent;
+    transition:transform 0.3s cubic-bezier(.2,.7,.3,1), border-color 0.3s, box-shadow 0.3s;
+  }
+  .path-card:hover, .path-card:focus-visible{
+    transform:translateY(-4px);
+    box-shadow:0 20px 40px -18px rgba(11,31,51,0.4);
+    border-color:var(--amber);
+  }
+  .path-card:focus-visible{ outline:2px solid var(--amber); outline-offset:2px; }
+
+  .path-card.student{ background:var(--ink-soft); }
+  .path-card.working{ background:var(--ink-softer); }
+
+  .path-top{display:flex; align-items:center; gap:14px; margin-bottom:22px;}
+  .path-icon{
+    width:44px; height:44px; border-radius:50%;
+    border:1px solid rgba(243,238,226,0.25);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .path-card .path-eyebrow{font-family:'IBM Plex Mono',monospace; font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--amber);}
+
+  .path-card h3{font-family:'Fraunces',serif; font-size:1.55rem; font-weight:500; margin-bottom:12px;}
+  .path-card p{font-size:0.92rem; line-height:1.6; color:var(--text-dim); margin-bottom:26px;}
+
+  .cta-btn{
+    display:inline-flex; align-items:center; gap:10px;
+    align-self:flex-start;
+    background:var(--amber); color:var(--text-dark);
+    font-weight:600; font-size:0.9rem;
+    padding:12px 22px; border-radius:3px;
+    border:none; cursor:pointer;
+    transition:gap 0.2s, background 0.2s;
+    margin-top:auto;
+  }
+  .cta-btn:hover{ gap:14px; background:#F0B15C; }
+  .cta-btn svg{width:16px; height:16px;}
+
+  /* ---------- composition diagram (about + methodology, unified) ---------- */
+  .composition{
+    display:grid; grid-template-columns:0.95fr 1.05fr; gap:64px; align-items:center;
+  }
+  .comp-copy p{font-size:0.97rem; line-height:1.7; color:var(--text-dim); max-width:46ch;}
+  .comp-copy p + p{margin-top:16px;}
+  .comp-copy .idx-key{display:flex; gap:22px; margin-top:30px; flex-wrap:wrap;}
+  .comp-copy .idx-key div{display:flex; align-items:center; gap:8px; font-size:0.82rem; color:var(--text-dim);}
+  .comp-copy .idx-key span{width:9px; height:9px; border-radius:50%; display:inline-block;}
+
+  /* ---------- FAQ ---------- */
+  .faq-list{ display:grid; grid-template-columns:1fr 1fr; gap:28px 48px; max-width:1000px; }
+  .faq-item h3{ font-family:'Fraunces',serif; font-weight:500; font-size:1.15rem; margin-bottom:10px; }
+  .faq-item p{ font-size:0.92rem; line-height:1.65; color:var(--text-dim); max-width:44ch; }
+
+  @media (max-width: 880px){
+    .faq-list{ grid-template-columns:1fr; }
+  }
+
+  /* ---------- footer ---------- */
+  #about, #faq{ background:var(--ink); }
+  footer{ background:var(--ink); }
+  footer{
+    padding:48px; border-top:1px solid rgba(243,238,226,0.1);
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;
+  }
+  footer .fnote{font-size:0.8rem; color:var(--text-dim);}
+  footer .fnote strong{color:var(--paper); font-weight:500;}
+
+  @media (max-width: 880px){
+    header{padding:18px 24px;}
+    header.scrolled{padding:14px 24px;}
+    .nav-toggle{display:flex;}
+    nav ul{
+      position:absolute; top:100%; left:0; right:0;
+      flex-direction:column; gap:0;
+      background:rgba(11,31,51,0.98);
+      max-height:0; overflow:hidden;
+      transition:max-height 0.35s ease;
+      border-bottom:1px solid rgba(243,238,226,0.08);
+    }
+    nav ul.open{ max-height:420px; }
+    nav a{ display:block; padding:16px 24px; border-top:1px solid rgba(243,238,226,0.06); }
+    nav a.nav-cta{
+      margin:14px 24px; padding:12px 22px;
+      text-align:center; justify-content:center;
+      border-top:none;
+    }
+    .hero{padding:120px 24px 60px;}
+    .hero-inner{grid-template-columns:1fr; gap:44px;}
+    .hero-stats{flex-wrap:wrap; row-gap:20px;}
+    section{padding:64px 24px;}
+    .paths{padding:56px 24px 72px;}
+    .path-grid{grid-template-columns:1fr;}
+    .composition{grid-template-columns:1fr; gap:44px;}
+    .comp-diagram svg{ width:100%; }
+    footer{padding:32px 24px; flex-direction:column; align-items:flex-start;}
+  }
+
+  /* ---------- stacked scroll sections (curtain-cover effect) ---------- */
+  .stack-panel{
+    position:sticky;
+    top:0;
+    min-height:100vh;
+    transform-origin:center top;
+    will-change:transform, filter;
+    box-shadow:0 -40px 70px -30px rgba(0,0,0,0.55);
+  }
+  /* the first panel has nothing underneath it, so no shadow */
+  .stack-panel.panel-first{ box-shadow:none; }
+
+  @media (prefers-reduced-motion: reduce){
+    .stack-panel{ position:relative !important; transform:none !important; filter:none !important; box-shadow:none; }
+  }
+
+</style>
+</head>
+<body>
+
+<div class="bg-field" aria-hidden="true">
+  <div class="bg-blob one"></div>
+  <div class="bg-blob two"></div>
+  <div class="bg-blob three"></div>
+
+  <svg viewBox="0 0 800 800" fill="none">
+    <g class="bg-drift">
+      <circle cx="400" cy="400" r="360" stroke="rgba(243,238,226,0.09)" stroke-width="1.2"/>
+      <circle cx="400" cy="400" r="300" stroke="rgba(232,162,61,0.12)" stroke-width="1.2"/>
+      <circle cx="400" cy="400" r="230" stroke="rgba(232,162,61,0.1)" stroke-width="1.2"/>
+      <circle cx="760" cy="400" r="4" fill="#E8A23D" opacity="0.85"/>
+      <circle cx="700" cy="180" r="3" fill="#E8A23D" opacity="0.8"/>
+      <circle cx="120" cy="520" r="3.4" fill="#F3EEE2" opacity="0.75"/>
+      <circle cx="640" cy="640" r="2.8" fill="#E8A23D" opacity="0.75"/>
+    </g>
+    <g class="bg-drift-rev">
+      <circle cx="400" cy="400" r="180" stroke="rgba(243,238,226,0.08)" stroke-width="1.2"/>
+      <circle cx="90" cy="230" r="3" fill="#E8A23D" opacity="0.7"/>
+      <circle cx="560" cy="90" r="2.6" fill="#F3EEE2" opacity="0.7"/>
+      <circle cx="220" cy="700" r="3.4" fill="#E8A23D" opacity="0.7"/>
+    </g>
+  </svg>
+
+  <svg class="bg-signature" viewBox="0 0 200 200" fill="none">
+    <polygon points="100,8 186,54 186,146 100,192 14,146 14,54" stroke="var(--amber)" stroke-width="1.4" stroke-dasharray="4 7"/>
+    <circle cx="100" cy="100" r="60" stroke="var(--teal)" stroke-width="1.2" opacity="0.8"/>
+    <circle cx="100" cy="40" r="4" fill="var(--amber)"/>
+    <circle cx="160" cy="100" r="3" fill="var(--teal)"/>
+  </svg>
+
+  <div class="bg-particle" style="left:6%; width:5px; height:5px; background:var(--amber); box-shadow:0 0 12px 3px rgba(232,162,61,0.6); animation-duration:16s; animation-delay:-2s; --drift:60px;"></div>
+  <div class="bg-particle" style="left:18%; width:3px; height:3px; background:var(--teal); box-shadow:0 0 10px 3px rgba(232,162,61,0.6); animation-duration:22s; animation-delay:-9s; --drift:-40px;"></div>
+  <div class="bg-particle" style="left:32%; width:4px; height:4px; background:#F3EEE2; box-shadow:0 0 10px 3px rgba(243,238,226,0.5); animation-duration:19s; animation-delay:-4s; --drift:30px;"></div>
+  <div class="bg-particle" style="left:48%; width:6px; height:6px; background:var(--amber); box-shadow:0 0 14px 4px rgba(232,162,61,0.55); animation-duration:26s; animation-delay:-14s; --drift:-70px;"></div>
+  <div class="bg-particle" style="left:61%; width:3px; height:3px; background:var(--teal); box-shadow:0 0 10px 3px rgba(232,162,61,0.6); animation-duration:15s; animation-delay:-6s; --drift:50px;"></div>
+  <div class="bg-particle" style="left:74%; width:5px; height:5px; background:#F3EEE2; box-shadow:0 0 12px 3px rgba(243,238,226,0.5); animation-duration:23s; animation-delay:-1s; --drift:-30px;"></div>
+  <div class="bg-particle" style="left:85%; width:4px; height:4px; background:var(--amber); box-shadow:0 0 12px 3px rgba(232,162,61,0.6); animation-duration:18s; animation-delay:-11s; --drift:40px;"></div>
+  <div class="bg-particle" style="left:93%; width:3px; height:3px; background:var(--teal); box-shadow:0 0 10px 3px rgba(232,162,61,0.55); animation-duration:21s; animation-delay:-16s; --drift:-50px;"></div>
+</div>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-name">Global HDI <span>× Explainable AI</span></div>
+  </div>
+  <nav>
+    <ul id="navList">
+      <li><a href="#paths">Choose a path</a></li>
+      <li><a href="#about">How it works</a></li>
+      <li><a href="#faq">FAQ</a></li>
+      <li><a href="contact.html">Contact us</a></li>
+      <li><a href="about.html">About us</a></li>
+      <li><a href="start.html" class="nav-cta">Start</a></li>
+    </ul>
+  </nav>
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navList">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<section class="hero stack-panel panel-first">
+  <div class="hero-inner">
+    <div>
+      <p class="eyebrow hero-fade" style="animation-delay:0.05s;">Final Year Project · 2026</p>
+      <h1 class="display hero-fade" style="animation-delay:0.15s;">
+        Reading the world's<br>
+        development scores <em>and</em><br>
+        <span class="mark">the reasons behind them
+          <svg viewBox="0 0 300 20" preserveAspectRatio="none"><path d="M4,12 Q150,2 296,10"/></svg>
+        </span>
+      </h1>
+      <p class="lede hero-fade" style="animation-delay:0.3s;">
+        A global Human Development Index platform where every prediction comes with its own explanation —
+        built for two kinds of people: those learning how development is measured, and those who use it to make decisions.
+      </p>
+      <div class="hero-stats hero-fade" style="animation-delay:0.42s;">
+        <div class="hero-stat">
+          <div class="num mono" data-count="190" data-suffix="+">0</div>
+          <div class="lbl">countries &amp; regions</div>
+        </div>
+        <div class="hero-stat">
+          <div class="num mono" data-count="3">0</div>
+          <div class="lbl">core indices tracked</div>
+        </div>
+        <div class="hero-stat">
+          <div class="num mono" data-count="2">0</div>
+          <div class="lbl">ways to explore</div>
+        </div>
+      </div>
+      <a href="#paths" class="cta-btn hero-fade" style="margin-top:36px; animation-delay:0.54s;">Choose your path
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <div class="globe-wrap hero-fade" style="animation-delay:0.2s;">
+      <svg viewBox="0 0 400 400" fill="none">
+        <g class="globe-ring">
+          <circle cx="200" cy="200" r="150" stroke="rgba(243,238,226,0.15)" stroke-width="1"/>
+          <ellipse cx="200" cy="200" rx="150" ry="60" stroke="rgba(232,162,61,0.35)" stroke-width="1"/>
+          <ellipse cx="200" cy="200" rx="150" ry="110" stroke="rgba(232,162,61,0.22)" stroke-width="1"/>
+          <ellipse cx="200" cy="200" rx="60" ry="150" stroke="rgba(232,162,61,0.22)" stroke-width="1"/>
+          <ellipse cx="200" cy="200" rx="110" ry="150" stroke="rgba(232,162,61,0.15)" stroke-width="1"/>
+        </g>
+        <circle cx="200" cy="200" r="150" stroke="rgba(232,162,61,0.4)" stroke-width="1" stroke-dasharray="2 6"/>
+
+        <circle class="pulse-dot" cx="140" cy="120" r="4.5" fill="#E8A23D"/>
+        <circle class="pulse-dot" cx="270" cy="150" r="3.5" fill="#E8A23D" style="animation-delay:0.4s"/>
+        <circle class="pulse-dot" cx="220" cy="270" r="4" fill="#F3EEE2" style="animation-delay:0.9s"/>
+        <circle class="pulse-dot" cx="130" cy="260" r="3" fill="#E8A23D" style="animation-delay:1.3s"/>
+        <circle class="pulse-dot" cx="255" cy="235" r="3.5" fill="#E8A23D" style="animation-delay:1.7s"/>
+        <circle class="pulse-dot" cx="190" cy="150" r="3" fill="#F3EEE2" style="animation-delay:0.6s"/>
+
+        <text x="200" y="205" text-anchor="middle" font-family="IBM Plex Mono" font-size="13" fill="#9FB3C4" letter-spacing="2">HDI · 0.891</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section class="paths stack-panel" id="paths">
+  <div class="paths-intro reveal">
+    <p class="eyebrow">Two ways in</p>
+    <h2>Who's reading the data today?</h2>
+    <p>The same dataset, framed for two different jobs — pick the one that matches yours.</p>
+  </div>
+  <div class="path-grid reveal-stagger">
+    <div class="path-card student reveal" style="--i:0" tabindex="0" role="link" data-href="start.html?path=learn">
+      <div class="path-top">
+        <div class="path-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A23D" stroke-width="1.6"><path d="M2 9l10-5 10 5-10 5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/><path d="M22 9v6"/></svg>
+        </div>
+        <span class="path-eyebrow">Path 01</span>
+      </div>
+      <h3>I'm learning how HDI works</h3>
+      <p>Walk through how health, education and income combine into one score, with every step of the maths shown and explained in plain language as you go.</p>
+      <button class="cta-btn" type="button">Start learning
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+    <div class="path-card working reveal" style="--i:1" tabindex="0" role="link" data-href="start.html?path=analyze">
+      <div class="path-top">
+        <div class="path-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E8A23D" stroke-width="1.6"><path d="M3 3v18h18"/><path d="M7 15l4-5 4 3 5-7"/></svg>
+        </div>
+        <span class="path-eyebrow">Path 02</span>
+      </div>
+      <h3>I need to make a decision</h3>
+      <p>Compare countries and years directly, then open the explainability panel to see exactly which index moved a score and by how much.</p>
+      <button class="cta-btn" type="button">Explore the data
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<section id="about" class="stack-panel">
+  <div class="section-inner composition">
+    <div class="comp-copy reveal">
+      <p class="eyebrow">How a score is built</p>
+      <h2 class="display" style="font-size:clamp(1.6rem,2.6vw,2.1rem); margin:12px 0 20px; line-height:1.2;">Three indices, combined — then unpacked again.</h2>
+      <p>A country's HDI isn't one measurement. It's the geometric mean of three separate indices, each capturing a different dimension of development.</p>
+      <p>The explainability layer runs the process in reverse — taking a finished score and showing exactly how much each index pulled it up or down.</p>
+      <div class="idx-key">
+        <div><span style="background:var(--amber);"></span>Health</div>
+        <div><span style="background:var(--teal);"></span>Education</div>
+        <div><span style="background:#F3EEE2;"></span>Income</div>
+      </div>
+    </div>
+
+    <div class="comp-diagram reveal" style="transition-delay:120ms;">
+      <svg viewBox="0 0 460 300" width="100%" style="overflow:visible;">
+        <line x1="90" y1="55" x2="220" y2="150" stroke="rgba(243,238,226,0.25)" stroke-width="1.5"/>
+        <line x1="90" y1="150" x2="220" y2="150" stroke="rgba(243,238,226,0.25)" stroke-width="1.5"/>
+        <line x1="90" y1="245" x2="220" y2="150" stroke="rgba(243,238,226,0.25)" stroke-width="1.5"/>
+        <line x1="260" y1="150" x2="360" y2="150" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="3 5"/>
+
+        <g>
+          <rect x="10" y="35" width="160" height="40" rx="3" fill="var(--ink-soft)" stroke="rgba(232,162,61,0.5)"/>
+          <text x="90" y="59" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#F3EEE2">Health index</text>
+        </g>
+        <g>
+          <rect x="10" y="130" width="160" height="40" rx="3" fill="var(--ink-soft)" stroke="rgba(232,162,61,0.5)"/>
+          <text x="90" y="154" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#F3EEE2">Education index</text>
+        </g>
+        <g>
+          <rect x="10" y="225" width="160" height="40" rx="3" fill="var(--ink-soft)" stroke="rgba(243,238,226,0.5)"/>
+          <text x="90" y="249" text-anchor="middle" font-family="IBM Plex Mono" font-size="12" fill="#F3EEE2">Income index</text>
+        </g>
+
+        <circle cx="220" cy="150" r="38" fill="var(--ink-softer)" stroke="var(--amber)" stroke-width="1.5"/>
+        <text x="220" y="146" text-anchor="middle" font-family="Fraunces" font-size="13" fill="#F3EEE2">HDI</text>
+        <text x="220" y="161" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="#9FB3C4">0.891</text>
+
+        <rect x="360" y="105" width="90" height="90" rx="4" fill="none" stroke="rgba(232,162,61,0.6)" stroke-dasharray="2 4"/>
+        <text x="405" y="98" text-anchor="middle" font-family="IBM Plex Mono" font-size="9" fill="var(--amber)" letter-spacing="1">WHY?</text>
+        <rect x="372" y="122" width="50" height="6" rx="1" fill="var(--amber)"/>
+        <rect x="372" y="140" width="34" height="6" rx="1" fill="var(--teal)"/>
+        <rect x="372" y="158" width="20" height="6" rx="1" fill="#F3EEE2" opacity="0.6"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section id="faq">
+  <div class="section-inner">
+    <div class="section-head reveal">
+      <p class="eyebrow">Questions</p>
+      <h2 class="display">Frequently asked questions</h2>
+    </div>
+    <div class="faq-list reveal-stagger">
+      <div class="faq-item reveal" style="--i:0">
+        <h3>What exactly is the HDI?</h3>
+        <p>The Human Development Index combines health, education and income indicators into a single score between 0 and 1, used to compare development across countries.</p>
+      </div>
+      <div class="faq-item reveal" style="--i:1">
+        <h3>What does "explainable" mean here?</h3>
+        <p>Every score comes with a breakdown showing exactly how much each underlying index — health, education, income — contributed to the final number.</p>
+      </div>
+      <div class="faq-item reveal" style="--i:2">
+        <h3>Do I need a background in statistics?</h3>
+        <p>No. Path 01 is built for people learning the concept from scratch, with the maths explained in plain language at every step.</p>
+      </div>
+      <div class="faq-item reveal" style="--i:3">
+        <h3>Is the data free to use?</h3>
+        <p>Yes. This is a final year project built on publicly available HDI data, intended for learning and exploration.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="fnote"><strong>Global HDI × Explainable AI</strong> — Final Year Project, 2026</div>
+  <div class="fnote">Built with transparency at every layer.</div>
+</footer>
+
+<script>
+(function(){
+  // Header solidifies on scroll
+  var header = document.querySelector('header');
+  var onScroll = function(){
+    header.classList.toggle('scrolled', window.scrollY > 24);
+  };
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive:true });
+
+  // Mobile nav toggle
+  var toggle = document.getElementById('navToggle');
+  var navList = document.getElementById('navList');
+  toggle.addEventListener('click', function(){
+    var open = navList.classList.toggle('open');
+    toggle.classList.toggle('open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  navList.querySelectorAll('a').forEach(function(link){
+    link.addEventListener('click', function(){
+      navList.classList.remove('open');
+      toggle.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  // Path cards: click or Enter/Space navigates
+  document.querySelectorAll('.path-card[data-href]').forEach(function(card){
+    var go = function(){ window.location.href = card.getAttribute('data-href'); };
+    card.addEventListener('click', go);
+    card.addEventListener('keydown', function(e){
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); go(); }
+    });
+    var btn = card.querySelector('.cta-btn');
+    if(btn){ btn.addEventListener('click', function(e){ e.stopPropagation(); go(); }); }
+  });
+
+  // Scroll-triggered reveals
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- stacked-panel "curtain cover" effect ----
+  // As the next panel scrolls up over the current one, the current panel
+  // eases back (slight scale-down + dim) so it visually reads as "underneath".
+  var stackPanels = document.querySelectorAll('.stack-panel');
+  if(stackPanels.length && !reduceMotion){
+    var stackTicking = false;
+    var updateStack = function(){
+      var vh = window.innerHeight;
+      for(var i = 0; i < stackPanels.length - 1; i++){
+        var current = stackPanels[i];
+        var next = stackPanels[i + 1];
+        var nextTop = next.getBoundingClientRect().top;
+        // progress: 0 = next panel hasn't arrived yet, 1 = next panel fully covers current
+        var progress = 1 - Math.min(Math.max(nextTop / vh, 0), 1);
+        var scale = 1 - (progress * 0.08);
+        var brightness = 1 - (progress * 0.45);
+        current.style.transform = 'scale(' + scale.toFixed(3) + ')';
+        current.style.filter = 'brightness(' + brightness.toFixed(3) + ')';
+      }
+      stackTicking = false;
+    };
+    var onStackScroll = function(){
+      if(!stackTicking){
+        window.requestAnimationFrame(updateStack);
+        stackTicking = true;
+      }
+    };
+    updateStack();
+    window.addEventListener('scroll', onStackScroll, { passive:true });
+    window.addEventListener('resize', onStackScroll);
+  }
+
+  var revealTargets = document.querySelectorAll('.reveal');
+  if(reduceMotion || !('IntersectionObserver' in window)){
+    revealTargets.forEach(function(el){ el.classList.add('is-visible'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          entry.target.classList.add('is-visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold:0.15, rootMargin:'0px 0px -40px 0px' });
+    revealTargets.forEach(function(el){ io.observe(el); });
+  }
+
+  // Animated stat count-up, once, on first view
+  var counted = false;
+  var stats = document.querySelectorAll('.hero-stat .num[data-count]');
+  var runCount = function(){
+    if(counted || reduceMotion) { 
+      stats.forEach(function(el){ el.textContent = el.getAttribute('data-count') + (el.getAttribute('data-suffix')||''); });
+      counted = true; return;
+    }
+    counted = true;
+    stats.forEach(function(el){
+      var target = parseInt(el.getAttribute('data-count'), 10);
+      var suffix = el.getAttribute('data-suffix') || '';
+      var start = performance.now();
+      var duration = 900;
+      var step = function(now){
+        var p = Math.min((now - start) / duration, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.round(eased * target) + suffix;
+        if(p < 1){ requestAnimationFrame(step); }
+      };
+      requestAnimationFrame(step);
+    });
+  };
+  window.setTimeout(runCount, 500);
+})();
+</script>
+
+</body>
+</html>
