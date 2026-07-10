@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About Us — Global HDI × Explainable AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B1F33;
+    --ink-soft:#132B45;
+    --ink-softer:#1C3A57;
+    --paper:#F3EEE2;
+    --paper-dim:#E7E0CE;
+    --amber:#E8A23D;
+    --teal:#E8A23D;
+    --text-light:#F3EEE2;
+    --text-dim:#9FB3C4;
+    --text-dark:#101C28;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+
+  html{scroll-behavior:smooth;}
+
+  body{
+    background:var(--ink);
+    color:var(--text-light);
+    font-family:'Inter',sans-serif;
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  ::selection{ background:var(--amber); color:var(--text-dark); }
+
+  :focus-visible{
+    outline:2px solid var(--amber);
+    outline-offset:3px;
+    border-radius:2px;
+  }
+
+  /* ---------- ambient moving background ---------- */
+  .bg-field{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+    overflow:hidden;
+  }
+  .bg-field svg{
+    position:absolute; top:50%; left:50%;
+    width:min(1700px, 240vw); height:min(1700px, 240vw);
+    transform:translate(-50%,-50%);
+  }
+  .bg-drift{ animation:bgspin 50s linear infinite; transform-origin:center; }
+  @keyframes bgspin{ to{ transform:rotate(360deg); } }
+  .bg-drift-rev{ animation:bgspin-rev 75s linear infinite; transform-origin:center; }
+  @keyframes bgspin-rev{ to{ transform:rotate(-360deg); } }
+  .bg-blob{
+    position:absolute; border-radius:50%;
+    filter:blur(80px); opacity:0.32;
+    animation:blobfloat 20s ease-in-out infinite;
+  }
+  .bg-blob.one{ width:480px; height:480px; background:var(--teal); top:-10%; left:-8%; }
+  .bg-blob.two{ width:420px; height:420px; background:var(--amber); bottom:-12%; right:-6%; animation-delay:-6s; animation-duration:24s; }
+  .bg-blob.three{ width:360px; height:360px; background:var(--ink-softer); top:40%; left:58%; animation-delay:-11s; animation-duration:18s; opacity:0.4; }
+  @keyframes blobfloat{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    33%{ transform:translate(90px,-70px) scale(1.15); }
+    66%{ transform:translate(-70px,60px) scale(0.9); }
+  }
+
+  .bg-particle{
+    position:absolute; bottom:-6%; border-radius:50%;
+    animation:particleRise linear infinite;
+    will-change:transform, opacity;
+  }
+  @keyframes particleRise{
+    0%{ transform:translate(0,0); opacity:0; }
+    8%{ opacity:1; }
+    88%{ opacity:1; }
+    100%{ transform:translate(var(--drift, 40px), -112vh); opacity:0; }
+  }
+
+  .bg-signature{
+    position:absolute; top:60%; left:-14%;
+    width:min(46vw, 620px); height:min(46vw, 620px);
+    animation:signatureFloat 55s ease-in-out infinite;
+    opacity:0.4;
+  }
+  @keyframes signatureFloat{
+    0%{ transform:translate(0,0) rotate(0deg); }
+    50%{ transform:translate(46vw, -46vh) rotate(180deg); }
+    100%{ transform:translate(0,0) rotate(360deg); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .bg-drift, .bg-drift-rev, .bg-blob, .bg-particle, .bg-signature, .wave svg{ animation:none !important; }
+  }
+
+  header, main, section, footer{ position:relative; z-index:1; }
+
+  /* ---------- stacked scroll sections (curtain-cover effect) ---------- */
+  main{ position:relative; }
+  .stack-panel{
+    position:sticky;
+    top:0;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    transform-origin:center top;
+    will-change:transform, filter;
+    box-shadow:0 -40px 70px -30px rgba(0,0,0,0.55);
+  }
+  /* the very first panel doesn't need to look like it's covering anything */
+  .stack-panel:first-child{ box-shadow:none; }
+
+  /* ---------- scroll reveal ---------- */
+  .reveal{
+    opacity:0; transform:translateY(22px);
+    transition:opacity 0.7s cubic-bezier(.2,.7,.3,1), transform 0.7s cubic-bezier(.2,.7,.3,1);
+  }
+  .reveal.is-visible{ opacity:1; transform:translateY(0); }
+  .reveal-stagger.is-visible > *{ transition-delay:calc(var(--i, 0) * 90ms); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  a{color:inherit;text-decoration:none;}
+
+  .display{font-family:'Fraunces',serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:0.72rem;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--amber);
+  }
+
+  /* ---------- nav ---------- */
+  header{
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 48px;
+    background:linear-gradient(to bottom, rgba(11,31,51,0.92), rgba(11,31,51,0));
+    backdrop-filter:blur(2px);
+    transition:background 0.35s ease, padding 0.35s ease, box-shadow 0.35s ease;
+  }
+  header.scrolled{
+    background:rgba(11,31,51,0.88);
+    padding:14px 48px;
+    box-shadow:0 1px 0 rgba(243,238,226,0.08), 0 20px 40px -30px rgba(0,0,0,0.6);
+  }
+
+  .nav-toggle{
+    display:none; width:36px; height:36px; border:none; background:none;
+    cursor:pointer; flex-direction:column; justify-content:center; gap:5px; padding:0;
+  }
+  .nav-toggle span{ width:100%; height:1.5px; background:var(--paper); transition:transform 0.25s, opacity 0.25s; }
+  .nav-toggle.open span:nth-child(1){ transform:translateY(6.5px) rotate(45deg); }
+  .nav-toggle.open span:nth-child(2){ opacity:0; }
+  .nav-toggle.open span:nth-child(3){ transform:translateY(-6.5px) rotate(-45deg); }
+  .brand{display:flex; align-items:center; gap:11px;}
+  .brand-mark{
+    width:30px; height:30px; border-radius:50%;
+    border:1.5px solid var(--amber);
+    position:relative;
+    flex-shrink:0;
+  }
+  .brand-mark::before, .brand-mark::after{
+    content:''; position:absolute; border:1px solid var(--teal); border-radius:50%; opacity:0.7;
+  }
+  .brand-mark::before{ inset:5px 0; border-left:none; border-right:none; }
+  .brand-mark::after{ inset:0 5px; border-top:none; border-bottom:none; }
+  .brand-name{font-family:'Fraunces',serif; font-size:1rem; font-weight:500; letter-spacing:0.01em;}
+  .brand-name span{color:var(--text-dim); font-weight:300; font-style:italic;}
+
+  nav ul{display:flex; gap:36px; list-style:none;}
+  nav a{
+    font-size:0.85rem; color:var(--text-dim); font-weight:500;
+    transition:color 0.2s;
+  }
+  nav a:hover, nav a.active{color:var(--paper);}
+
+  /* ---------- page intro ---------- */
+  .about-hero{
+    padding:160px 48px 60px;
+    max-width:820px; margin:0 auto; text-align:center;
+  }
+  .about-hero h1{
+    font-size:clamp(2rem, 3.6vw, 3rem);
+    font-weight:500; line-height:1.15; letter-spacing:-0.01em;
+    margin:14px 0 20px;
+  }
+  .about-hero h1 em{font-style:italic; font-weight:300; color:var(--teal);}
+  .about-hero p{
+    font-size:1.02rem; line-height:1.7; color:var(--text-dim);
+    max-width:60ch; margin:0 auto;
+  }
+
+  /* ---------- section shell ---------- */
+  section{padding:60px 48px 100px;}
+  .section-inner{max-width:1280px; margin:0 auto;}
+
+  /* ---------- team ---------- */
+  .team-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:28px;
+    max-width:940px; margin:0 auto;
+  }
+  .team-card{
+    background:var(--ink-soft); color:var(--text-light);
+    border-radius:8px; padding:44px 36px;
+    text-align:center;
+    border:1px solid rgba(243,238,226,0.08);
+    transition:transform 0.3s cubic-bezier(.2,.7,.3,1), border-color 0.3s, box-shadow 0.3s;
+  }
+  .team-card:hover{
+    transform:translateY(-4px);
+    box-shadow:0 20px 40px -18px rgba(11,31,51,0.4);
+    border-color:var(--accent, var(--amber));
+  }
+  .team-avatar{
+    width:76px; height:76px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    margin:0 auto 20px;
+    font-family:'Fraunces',serif; font-size:1.5rem;
+    border:1.5px solid var(--accent, var(--amber));
+    color:var(--accent, var(--amber));
+    background:rgba(243,238,226,0.04);
+  }
+  .team-role{
+    font-family:'IBM Plex Mono',monospace; font-size:0.72rem;
+    letter-spacing:0.12em; text-transform:uppercase;
+    color:var(--accent, var(--amber));
+  }
+  .team-card h2{font-family:'Fraunces',serif; font-size:1.5rem; font-weight:500; margin:10px 0 14px;}
+  .team-card p{font-size:0.93rem; line-height:1.65; color:var(--text-dim); margin-bottom:20px;}
+  .team-tags{display:flex; flex-wrap:wrap; gap:8px; justify-content:center;}
+  .team-tags span{
+    font-family:'IBM Plex Mono',monospace; font-size:0.7rem;
+    padding:5px 11px; border-radius:20px;
+    border:1px solid rgba(243,238,226,0.2);
+    color:var(--text-dim);
+  }
+
+  /* ---------- mission strip ---------- */
+  .mission{
+    position:relative;
+    background:var(--paper); color:var(--text-dark);
+    padding:80px 48px;
+  }
+  .mission-inner{
+    max-width:900px; margin:0 auto; text-align:center;
+  }
+  .mission .eyebrow{color:#B97A1F;}
+  .mission h2{
+    font-family:'Fraunces',serif; font-weight:500;
+    font-size:clamp(1.6rem, 2.6vw, 2.1rem); margin:12px 0 0; line-height:1.25;
+  }
+  .accent-line{
+    width:0; height:3px; margin:22px auto 22px;
+    background:var(--amber); border-radius:2px;
+    transition:width 1s cubic-bezier(.2,.7,.3,1) 0.1s;
+  }
+  .mission-inner.is-visible .accent-line{ width:64px; }
+  .mission p{color:#4C5A66; font-size:1rem; line-height:1.75; max-width:64ch; margin:0 auto;}
+  .mission-stats{
+    display:flex; justify-content:center; gap:48px; margin-top:40px; flex-wrap:wrap;
+  }
+  .mission-stat .num{font-family:'Fraunces',serif; font-size:1.9rem; color:var(--text-dark);}
+  .mission-stat .lbl{font-size:0.78rem; color:#5A6773; margin-top:4px;}
+
+  /* ---------- wave dividers between sections ---------- */
+  .wave{
+    position:absolute; left:0; width:100%; line-height:0;
+    pointer-events:none; overflow:hidden; z-index:2;
+  }
+  .wave svg{
+    display:block; width:100%; height:64px;
+    animation:waveFlow 9s ease-in-out infinite alternate;
+    transform-origin:center;
+  }
+  @keyframes waveFlow{
+    0%{ transform:translateX(0) scaleY(1); }
+    100%{ transform:translateX(-2.5%) scaleY(1.12); }
+  }
+  .wave-top{ top:0; transform:translateY(-100%); }
+  .wave-bottom{ bottom:0; transform:translateY(99%); }
+
+  /* ---------- footer ---------- */
+  footer{
+    padding:48px; border-top:1px solid rgba(243,238,226,0.1);
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;
+  }
+  footer .fnote{font-size:0.8rem; color:var(--text-dim);}
+  footer .fnote strong{color:var(--paper); font-weight:500;}
+
+  @media (max-width: 880px){
+    header{padding:18px 24px;}
+    header.scrolled{padding:14px 24px;}
+    .nav-toggle{display:flex;}
+    nav ul{
+      position:absolute; top:100%; left:0; right:0;
+      flex-direction:column; gap:0;
+      background:rgba(11,31,51,0.98);
+      max-height:0; overflow:hidden;
+      transition:max-height 0.35s ease;
+      border-bottom:1px solid rgba(243,238,226,0.08);
+    }
+    nav ul.open{ max-height:260px; }
+    nav a{ display:block; padding:16px 24px; border-top:1px solid rgba(243,238,226,0.06); }
+    .about-hero{padding:130px 24px 48px;}
+    section{padding:48px 24px 72px;}
+    .team-grid{grid-template-columns:1fr;}
+    .mission{padding:56px 24px;}
+    .mission-stats{gap:32px;}
+    .wave svg{height:36px;}
+    footer{padding:32px 24px; flex-direction:column; align-items:flex-start;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .stack-panel{ position:relative; transform:none !important; filter:none !important; box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-field" aria-hidden="true">
+  <div class="bg-blob one"></div>
+  <div class="bg-blob two"></div>
+  <div class="bg-blob three"></div>
+
+  <svg viewBox="0 0 800 800" fill="none">
+    <g class="bg-drift">
+      <circle cx="400" cy="400" r="360" stroke="rgba(243,238,226,0.09)" stroke-width="1.2"/>
+      <circle cx="400" cy="400" r="300" stroke="rgba(232,162,61,0.12)" stroke-width="1.2"/>
+      <circle cx="400" cy="400" r="230" stroke="rgba(232,162,61,0.1)" stroke-width="1.2"/>
+      <circle cx="760" cy="400" r="4" fill="#E8A23D" opacity="0.85"/>
+      <circle cx="700" cy="180" r="3" fill="#E8A23D" opacity="0.8"/>
+      <circle cx="120" cy="520" r="3.4" fill="#F3EEE2" opacity="0.75"/>
+      <circle cx="640" cy="640" r="2.8" fill="#E8A23D" opacity="0.75"/>
+    </g>
+    <g class="bg-drift-rev">
+      <circle cx="400" cy="400" r="180" stroke="rgba(243,238,226,0.08)" stroke-width="1.2"/>
+      <circle cx="90" cy="230" r="3" fill="#E8A23D" opacity="0.7"/>
+      <circle cx="560" cy="90" r="2.6" fill="#F3EEE2" opacity="0.7"/>
+      <circle cx="220" cy="700" r="3.4" fill="#E8A23D" opacity="0.7"/>
+    </g>
+  </svg>
+
+  <svg class="bg-signature" viewBox="0 0 200 200" fill="none">
+    <polygon points="100,8 186,54 186,146 100,192 14,146 14,54" stroke="var(--amber)" stroke-width="1.4" stroke-dasharray="4 7"/>
+    <circle cx="100" cy="100" r="60" stroke="var(--teal)" stroke-width="1.2" opacity="0.8"/>
+    <circle cx="100" cy="40" r="4" fill="var(--amber)"/>
+    <circle cx="160" cy="100" r="3" fill="var(--teal)"/>
+  </svg>
+
+  <div class="bg-particle" style="left:6%; width:5px; height:5px; background:var(--amber); box-shadow:0 0 12px 3px rgba(232,162,61,0.6); animation-duration:16s; animation-delay:-2s; --drift:60px;"></div>
+  <div class="bg-particle" style="left:18%; width:3px; height:3px; background:var(--teal); box-shadow:0 0 10px 3px rgba(232,162,61,0.6); animation-duration:22s; animation-delay:-9s; --drift:-40px;"></div>
+  <div class="bg-particle" style="left:32%; width:4px; height:4px; background:#F3EEE2; box-shadow:0 0 10px 3px rgba(243,238,226,0.5); animation-duration:19s; animation-delay:-4s; --drift:30px;"></div>
+  <div class="bg-particle" style="left:48%; width:6px; height:6px; background:var(--amber); box-shadow:0 0 14px 4px rgba(232,162,61,0.55); animation-duration:26s; animation-delay:-14s; --drift:-70px;"></div>
+  <div class="bg-particle" style="left:61%; width:3px; height:3px; background:var(--teal); box-shadow:0 0 10px 3px rgba(232,162,61,0.6); animation-duration:15s; animation-delay:-6s; --drift:50px;"></div>
+  <div class="bg-particle" style="left:74%; width:5px; height:5px; background:#F3EEE2; box-shadow:0 0 12px 3px rgba(243,238,226,0.5); animation-duration:23s; animation-delay:-1s; --drift:-30px;"></div>
+  <div class="bg-particle" style="left:85%; width:4px; height:4px; background:var(--amber); box-shadow:0 0 12px 3px rgba(232,162,61,0.6); animation-duration:18s; animation-delay:-11s; --drift:40px;"></div>
+  <div class="bg-particle" style="left:93%; width:3px; height:3px; background:var(--teal); box-shadow:0 0 10px 3px rgba(232,162,61,0.55); animation-duration:21s; animation-delay:-16s; --drift:-50px;"></div>
+</div>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-name">Global HDI <span>× Explainable AI</span></div>
+  </div>
+  <nav>
+    <ul id="navList">
+      <li><a href="index.html#paths">Choose a path</a></li>
+      <li><a href="index.html#about">How it works</a></li>
+      <li><a href="about.html" class="active">About us</a></li>
+      <li><a href="start.html">Start</a></li>
+    </ul>
+  </nav>
+  <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navList">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+
+<main>
+  <div class="about-hero stack-panel">
+    <div class="reveal">
+      <p class="eyebrow">About us</p>
+      <h1 class="display">Two students, one dataset,<br><em>no black boxes</em></h1>
+      <p>We're a two-person team of CSE students building this platform as our final year project — combining a global development dataset with an explainability layer that shows its reasoning at every step.</p>
+    </div>
+  </div>
+
+  <section id="team" class="stack-panel">
+    <div class="section-inner">
+      <div class="team-grid reveal-stagger">
+        <div class="team-card reveal" style="--i:0; --accent:var(--amber);">
+          <div class="team-avatar">JF</div>
+          <span class="team-role">Team Lead</span>
+          <h2>Jannatul Ferdaues</h2>
+          <p>Leads the project's direction and system design, with a focus on the explainability layer that turns HDI predictions into transparent, step-by-step reasoning. CSE student aiming for a career in AI engineering.</p>
+          <div class="team-tags"><span>Project Lead</span><span>Explainable AI</span><span>System Design</span></div>
+        </div>
+        <div class="team-card reveal" style="--i:1; --accent:var(--teal);">
+          <div class="team-avatar">SR</div>
+          <span class="team-role">Team Member</span>
+          <h2>Sabbir Rahin</h2>
+          <p>Works on data modelling and the analysis pipeline behind the HDI dataset — from cleaning and index calculation to the visual comparisons users interact with. CSE student aiming for a career in data analysis.</p>
+          <div class="team-tags"><span>Data Modelling</span><span>Analysis Pipeline</span><span>Visualization</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mission stack-panel" style="padding-top:0; padding-bottom:0;">
+    <div class="wave wave-top" aria-hidden="true">
+      <svg viewBox="0 0 1440 100" preserveAspectRatio="none">
+        <path d="M0,55 C220,10 420,95 720,50 C1020,5 1220,90 1440,45 L1440,100 L0,100 Z" fill="var(--paper)"/>
+      </svg>
+    </div>
+    <div class="mission-inner reveal">
+      <p class="eyebrow">Why we built this</p>
+      <h2>A final year project meant to prove we can ship something real.</h2>
+      <div class="accent-line"></div>
+      <p>Development statistics are usually handed over as a finished score with no visible working. We wanted to build something that keeps the working visible — a system that computes the Human Development Index and explains, in plain language, which factor moved a country's score and by how much. It's our way of showing the kind of engineering and analytical thinking we want to bring into our careers.</p>
+      <div class="mission-stats">
+        <div class="mission-stat">
+          <div class="num mono" data-count="2">0</div>
+          <div class="lbl">team members</div>
+        </div>
+        <div class="mission-stat">
+          <div class="num mono" data-count="1">0</div>
+          <div class="lbl">shared project</div>
+        </div>
+        <div class="mission-stat">
+          <div class="num mono" data-count="2026">0</div>
+          <div class="lbl">final year</div>
+        </div>
+      </div>
+    </div>
+    <div class="wave wave-bottom" aria-hidden="true">
+      <svg viewBox="0 0 1440 100" preserveAspectRatio="none" style="animation-delay:-4s;">
+        <path d="M0,45 C220,90 420,5 720,50 C1020,95 1220,10 1440,55 L1440,0 L0,0 Z" fill="var(--ink)"/>
+      </svg>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="fnote"><strong>Global HDI × Explainable AI</strong> — Final Year Project, 2026</div>
+  <div class="fnote">Built with transparency at every layer.</div>
+</footer>
+
+<script>
+(function(){
+  var header = document.querySelector('header');
+  var onScroll = function(){
+    header.classList.toggle('scrolled', window.scrollY > 24);
+  };
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive:true });
+
+  var toggle = document.getElementById('navToggle');
+  var navList = document.getElementById('navList');
+  toggle.addEventListener('click', function(){
+    var open = navList.classList.toggle('open');
+    toggle.classList.toggle('open', open);
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+  navList.querySelectorAll('a').forEach(function(link){
+    link.addEventListener('click', function(){
+      navList.classList.remove('open');
+      toggle.classList.remove('open');
+      toggle.setAttribute('aria-expanded', 'false');
+    });
+  });
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- stacked-panel "curtain cover" effect ----
+  // As the next panel scrolls up over the current one, the current panel
+  // eases back (slight scale-down + dim) so it visually reads as "underneath".
+  var stackPanels = document.querySelectorAll('.stack-panel');
+  if(stackPanels.length && !reduceMotion){
+    var stackTicking = false;
+    var updateStack = function(){
+      var vh = window.innerHeight;
+      for(var i = 0; i < stackPanels.length - 1; i++){
+        var current = stackPanels[i];
+        var next = stackPanels[i + 1];
+        var nextTop = next.getBoundingClientRect().top;
+        // progress: 0 = next panel hasn't arrived yet, 1 = next panel fully covers current
+        var progress = 1 - Math.min(Math.max(nextTop / vh, 0), 1);
+        var scale = 1 - (progress * 0.08);
+        var brightness = 1 - (progress * 0.45);
+        current.style.transform = 'scale(' + scale.toFixed(3) + ')';
+        current.style.filter = 'brightness(' + brightness.toFixed(3) + ')';
+      }
+      stackTicking = false;
+    };
+    var onStackScroll = function(){
+      if(!stackTicking){
+        window.requestAnimationFrame(updateStack);
+        stackTicking = true;
+      }
+    };
+    updateStack();
+    window.addEventListener('scroll', onStackScroll, { passive:true });
+    window.addEventListener('resize', onStackScroll);
+  }
+
+  var revealTargets = document.querySelectorAll('.reveal');
+  if(reduceMotion || !('IntersectionObserver' in window)){
+    revealTargets.forEach(function(el){ el.classList.add('is-visible'); });
+  } else {
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          entry.target.classList.add('is-visible');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold:0.15, rootMargin:'0px 0px -40px 0px' });
+    revealTargets.forEach(function(el){ io.observe(el); });
+  }
+
+  // Mission stats count-up, once, on first view
+  var statsCounted = false;
+  var missionStats = document.querySelectorAll('.mission-stat .num[data-count]');
+  var statsWrap = document.querySelector('.mission-stats');
+  if(missionStats.length && statsWrap){
+    var runStatsCount = function(){
+      if(statsCounted) return;
+      statsCounted = true;
+      missionStats.forEach(function(el){
+        var target = parseInt(el.getAttribute('data-count'), 10);
+        if(reduceMotion){ el.textContent = target; return; }
+        var start = performance.now();
+        var duration = 900;
+        var step = function(now){
+          var p = Math.min((now - start) / duration, 1);
+          var eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = Math.round(eased * target);
+          if(p < 1){ requestAnimationFrame(step); }
+        };
+        requestAnimationFrame(step);
+      });
+    };
+    if(!('IntersectionObserver' in window)){
+      runStatsCount();
+    } else {
+      var statsIO = new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){
+          if(entry.isIntersecting){
+            runStatsCount();
+            statsIO.unobserve(entry.target);
+          }
+        });
+      }, { threshold:0.4 });
+      statsIO.observe(statsWrap);
+    }
+  }
+})();
+</script>
+
+</body>
+</html>
