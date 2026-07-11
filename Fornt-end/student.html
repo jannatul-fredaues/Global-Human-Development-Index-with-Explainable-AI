@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student — Global HDI × Explainable AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B1F33;
+    --ink-soft:#132B45;
+    --ink-softer:#1C3A57;
+    --paper:#F3EEE2;
+    --amber:#E8A23D;
+    --teal:#5FA79C;
+    --text-dim:#9FB3C4;
+    --bad:#D97757;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'Inter',sans-serif;
+    overflow-x:hidden;
+    position:relative;
+  }
+  a{color:inherit;text-decoration:none;}
+  .display{font-family:'Fraunces',serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  /* ---------- ambient blobs (matches site) ---------- */
+  .blob{position:fixed; z-index:0; border-radius:50%; filter:blur(70px); pointer-events:none; opacity:0.28; will-change:transform, filter;}
+  .blob-a{width:460px; height:460px; top:-140px; left:-100px; background:radial-gradient(circle at 40% 40%, var(--amber), transparent 70%); animation:driftA 26s ease-in-out infinite alternate, hueA 40s ease-in-out infinite;}
+  .blob-b{width:520px; height:520px; bottom:-180px; right:-140px; background:radial-gradient(circle at 60% 60%, var(--teal), transparent 70%); animation:driftB 32s ease-in-out infinite alternate, hueA 46s ease-in-out infinite reverse;}
+  .blob-c{width:360px; height:360px; top:38%; left:58%; background:radial-gradient(circle at 50% 50%, var(--paper), transparent 70%); opacity:0.12; animation:driftC 38s ease-in-out infinite alternate;}
+  .blob-d{width:300px; height:300px; top:8%; left:34%; background:radial-gradient(circle at 50% 50%, var(--teal), transparent 70%); opacity:0.16; animation:driftD 22s ease-in-out infinite alternate;}
+  @keyframes driftA{0%{transform:translate(0,0) scale(1);}35%{transform:translate(90px,40px) scale(1.1);}70%{transform:translate(40px,140px) scale(0.92);}100%{transform:translate(120px,90px) scale(1.05);}}
+  @keyframes driftB{0%{transform:translate(0,0) scale(1);}35%{transform:translate(-90px,-30px) scale(1.12);}70%{transform:translate(-30px,-130px) scale(0.9);}100%{transform:translate(-110px,-70px) scale(1.04);}}
+  @keyframes driftC{0%{transform:translate(0,0) scale(1);}50%{transform:translate(-140px,80px) scale(1.25);}100%{transform:translate(-60px,-60px) scale(0.85);}}
+  @keyframes driftD{0%{transform:translate(0,0) scale(1);}50%{transform:translate(100px,60px) scale(1.15);}100%{transform:translate(-40px,120px) scale(0.9);}}
+  @keyframes hueA{0%,100%{filter:blur(70px) hue-rotate(0deg);}50%{filter:blur(70px) hue-rotate(28deg);}}
+
+  .bg-particle{position:fixed; z-index:0; bottom:-6%; border-radius:50%; pointer-events:none; animation:particleRise linear infinite; will-change:transform, opacity;}
+  @keyframes particleRise{0%{transform:translate(0,0); opacity:0;}8%{opacity:1;}88%{opacity:1;}100%{transform:translate(var(--drift, 40px), -112vh); opacity:0;}}
+
+  .bg-signature{position:fixed; z-index:0; top:58%; left:-16%; width:min(42vw, 560px); height:min(42vw, 560px); pointer-events:none; animation:signatureFloat 60s ease-in-out infinite; opacity:0.3;}
+  @keyframes signatureFloat{0%{transform:translate(0,0) rotate(0deg);}50%{transform:translate(48vw, -50vh) rotate(180deg);}100%{transform:translate(0,0) rotate(360deg);}}
+  @media (prefers-reduced-motion: reduce){.bg-particle, .bg-signature{animation:none !important; opacity:0;}}
+
+  .grid-layer{position:fixed; inset:-10% -10%; z-index:0; pointer-events:none; opacity:0.14;
+    background-image:linear-gradient(rgba(159,179,196,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(159,179,196,0.5) 1px, transparent 1px);
+    background-size:64px 64px; animation:gridDrift 50s linear infinite;
+    mask-image:radial-gradient(65% 60% at 50% 40%, #000 40%, transparent 90%);
+  }
+  @keyframes gridDrift{from{transform:translate(0,0);}to{transform:translate(64px,64px);}}
+
+  #net{position:fixed; inset:0; width:100%; height:100%; z-index:0; opacity:0.6;}
+  .glow{position:fixed; inset:0; z-index:1; pointer-events:none; background:radial-gradient(480px circle at var(--mx,50%) var(--my,30%), rgba(232,162,61,0.10), transparent 60%); transition:background 0.3s ease;}
+  .vignette{position:fixed; inset:0; z-index:1; pointer-events:none; background:radial-gradient(120% 120% at 50% 0%, transparent 40%, var(--ink) 96%);}
+
+  /* ---------- header ---------- */
+  header{position:relative; z-index:5; display:flex; align-items:center; justify-content:space-between; padding:28px 48px;}
+  .brand{display:flex; align-items:center; gap:11px;}
+  .brand-mark{width:28px; height:28px; border-radius:50%; border:1.5px solid var(--amber); position:relative; flex-shrink:0; animation:markSpin 18s linear infinite;}
+  @keyframes markSpin{to{transform:rotate(360deg);}}
+  .brand-mark::before, .brand-mark::after{content:''; position:absolute; border:1px solid var(--teal); border-radius:50%; opacity:0.7;}
+  .brand-mark::before{inset:5px 0; border-left:none; border-right:none;}
+  .brand-mark::after{inset:0 5px; border-top:none; border-bottom:none;}
+  .brand-name{font-family:'Fraunces',serif; font-size:0.95rem; font-weight:500;}
+  .brand-name span{color:var(--text-dim); font-weight:300; font-style:italic;}
+  .back-link{display:flex; align-items:center; gap:8px; font-size:0.8rem; color:var(--text-dim); font-family:'IBM Plex Mono',monospace; letter-spacing:0.03em; transition:color 0.2s, gap 0.2s;}
+  .back-link:hover{color:var(--paper); gap:11px;}
+  .back-link svg{width:13px; height:13px; transform:rotate(180deg);}
+
+  /* ---------- main ---------- */
+  main{position:relative; z-index:5; min-height:calc(100vh - 120px); display:flex; flex-direction:column; align-items:center; padding:50px 32px 60px;}
+
+  .eyebrow-line{display:flex; align-items:center; gap:12px; margin-bottom:22px; opacity:0; animation:riseIn 0.7s cubic-bezier(.2,.8,.2,1) forwards 0.1s;}
+  .eyebrow-line .rule{width:28px; height:1px; background:var(--amber);}
+  .eyebrow-line span{font-family:'IBM Plex Mono',monospace; font-size:0.72rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--amber);}
+
+  h1.kinetic{font-family:'Fraunces',serif; font-weight:500; font-size:clamp(2rem, 4.6vw, 3.6rem); line-height:1.08; letter-spacing:-0.01em; max-width:20ch; text-align:center;}
+  h1.kinetic .line{overflow:hidden; display:block;}
+  h1.kinetic .word{display:inline-block; transform:translateY(112%); animation:riseWord 0.85s cubic-bezier(.19,1,.22,1) forwards;}
+  h1.kinetic em{font-style:italic; font-weight:300; color:var(--teal);}
+  @keyframes riseWord{to{transform:translateY(0);}}
+  @keyframes riseIn{to{opacity:1;}}
+
+  p.sub{margin:20px auto 0; max-width:52ch; color:var(--text-dim); font-size:1.0rem; line-height:1.6; text-align:center; opacity:0; animation:riseIn 0.8s ease forwards 0.95s;}
+
+  /* ---------- form shell ---------- */
+  .form-wrap{width:100%; max-width:840px; margin:48px auto 0; opacity:0; animation:riseIn 0.8s ease forwards 1.05s;}
+  .form-shell{background:var(--ink-soft); border:1px solid rgba(243,238,226,0.08); border-radius:8px; padding:42px 40px 38px; text-align:left;}
+
+  .section-block{margin-bottom:36px; padding-bottom:36px; border-bottom:1px solid rgba(243,238,226,0.07);}
+  .section-block:last-of-type{border-bottom:none; margin-bottom:0; padding-bottom:0;}
+  .section-head{display:flex; align-items:center; gap:13px; margin-bottom:18px;}
+  .section-icon{width:34px; height:34px; border-radius:50%; border:1px solid rgba(243,238,226,0.25); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .section-head h3{font-family:'Fraunces',serif; font-weight:500; font-size:1.08rem;}
+  .section-head p{font-size:0.82rem; color:var(--text-dim); margin-top:2px;}
+
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  .field-row + .field-row{margin-top:20px;}
+  .field{display:flex; flex-direction:column; gap:8px;}
+  .field.full{grid-column:1 / -1;}
+  .field label{font-family:'IBM Plex Mono',monospace; font-size:0.68rem; letter-spacing:0.09em; text-transform:uppercase; color:var(--text-dim);}
+
+  select, input[type="number"]{
+    appearance:none; -webkit-appearance:none;
+    background:var(--ink); border:1px solid rgba(243,238,226,0.15); border-radius:4px;
+    color:var(--paper); padding:12px 14px; font-family:'Inter',sans-serif; font-size:0.92rem;
+    outline:none; transition:border-color 0.2s, box-shadow 0.2s;
+  }
+  select{
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239FB3C4' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 14px center; padding-right:36px;
+  }
+  select:focus, input[type="number"]:focus{border-color:var(--amber); box-shadow:0 0 0 3px rgba(232,162,61,0.12);}
+  .field .hint{font-size:0.74rem; color:var(--text-dim); opacity:0.75;}
+
+  .amount-field{position:relative;}
+  .amount-field input{padding-left:44px; width:100%;}
+  .amount-field .prefix{position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--text-dim); font-family:'IBM Plex Mono',monospace; font-size:0.85rem; pointer-events:none;}
+
+  .slider-field .slider-top{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:6px;}
+  .slider-value{font-family:'Fraunces',serif; color:var(--teal); font-size:1.3rem;}
+  input[type="range"]{
+    -webkit-appearance:none; -moz-appearance:none; appearance:none;
+    width:100%; height:24px; background:transparent; outline:none; cursor:pointer; margin:4px 0;
+    --val:50%;
+  }
+  /* track */
+  input[type="range"]::-webkit-slider-runnable-track{
+    width:100%; height:6px; border-radius:3px;
+    background:linear-gradient(to right, var(--amber) 0%, var(--amber) var(--val), rgba(243,238,226,0.15) var(--val), rgba(243,238,226,0.15) 100%);
+  }
+  input[type="range"]::-moz-range-track{
+    width:100%; height:6px; border-radius:3px; background:rgba(243,238,226,0.15);
+  }
+  input[type="range"]::-moz-range-progress{
+    height:6px; border-radius:3px; background:var(--amber);
+  }
+  /* thumb */
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:20px; height:20px; border-radius:50%; margin-top:-7px;
+    background:var(--amber); cursor:grab; border:3px solid var(--ink-soft);
+    box-shadow:0 0 0 4px rgba(232,162,61,0.18); transition:box-shadow 0.2s, transform 0.15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover{box-shadow:0 0 0 7px rgba(232,162,61,0.24); transform:scale(1.05);}
+  input[type="range"]:active::-webkit-slider-thumb{cursor:grabbing; box-shadow:0 0 0 8px rgba(232,162,61,0.28); transform:scale(1.1);}
+  input[type="range"]::-moz-range-thumb{
+    width:20px; height:20px; border-radius:50%; border:3px solid var(--ink-soft);
+    background:var(--amber); cursor:grab; box-shadow:0 0 0 4px rgba(232,162,61,0.18);
+  }
+  input[type="range"]:active::-moz-range-thumb{cursor:grabbing;}
+  input[type="range"]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px var(--ink-soft), 0 0 0 7px var(--amber);}
+  input[type="range"]:focus-visible::-moz-range-thumb{box-shadow:0 0 0 4px var(--ink-soft), 0 0 0 7px var(--amber);}
+  .slider-labels{display:flex; justify-content:space-between; font-size:0.68rem; color:var(--text-dim); font-family:'IBM Plex Mono',monospace; margin-top:8px; letter-spacing:0.02em;}
+
+  .submit-row{display:flex; justify-content:center; margin-top:6px;}
+  .cta-btn{
+    display:inline-flex; align-items:center; gap:9px; background:var(--amber); color:#101C28;
+    font-weight:600; font-size:0.9rem; padding:14px 26px; border-radius:3px; border:none; cursor:pointer;
+    position:relative; overflow:hidden; transition:gap 0.25s; font-family:'Inter',sans-serif;
+  }
+  .cta-btn::before{content:''; position:absolute; inset:0; background:#F0B15C; transform:translateX(-100%); transition:transform 0.35s ease;}
+  .cta-btn span, .cta-btn svg{position:relative; z-index:1;}
+  .cta-btn:hover{gap:13px;}
+  .cta-btn:hover::before{transform:translateX(0);}
+  .cta-btn svg{width:15px; height:15px; transition:transform 0.25s;}
+  .cta-btn:hover svg{transform:translateX(3px);}
+
+  /* ---------- results ---------- */
+  .result-panel{max-width:840px; width:100%; margin:34px auto 0; opacity:0; max-height:0; overflow:hidden; transition:opacity 0.6s ease;}
+  .result-panel.visible{opacity:1; max-height:none; overflow:visible; animation:riseIn 0.6s ease forwards;}
+  .result-inner{background:var(--ink-softer); border:1px solid rgba(243,238,226,0.08); border-radius:8px; padding:38px 40px; text-align:left;}
+  .result-top{display:flex; align-items:flex-end; justify-content:space-between; gap:20px; flex-wrap:wrap; margin-bottom:8px;}
+  .result-eyebrow{font-family:'IBM Plex Mono',monospace; font-size:0.7rem; letter-spacing:0.14em; text-transform:uppercase; color:var(--amber); margin-bottom:8px;}
+  .score-display{display:flex; align-items:baseline; gap:12px;}
+  .score-num{font-family:'Fraunces',serif; font-size:3.2rem; font-weight:500; color:var(--paper);}
+  .score-tag{font-family:'IBM Plex Mono',monospace; font-size:0.78rem; padding:5px 11px; border-radius:20px; border:1px solid rgba(243,238,226,0.2); color:var(--text-dim);}
+  .result-note{font-size:0.88rem; color:var(--text-dim); line-height:1.6; max-width:46ch;}
+
+  .factors{margin-top:30px; display:flex; flex-direction:column; gap:16px;}
+  .factor-label{display:flex; justify-content:space-between; font-family:'IBM Plex Mono',monospace; font-size:0.76rem; color:var(--text-dim); margin-bottom:7px;}
+  .factor-label b{color:var(--paper); font-weight:500;}
+  .factor-track{height:7px; background:rgba(243,238,226,0.08); border-radius:4px; overflow:hidden;}
+  .factor-fill{height:100%; border-radius:4px; width:0%; transition:width 0.9s cubic-bezier(.2,.8,.2,1);}
+
+  .country-note{margin-top:26px; padding-top:22px; border-top:1px solid rgba(243,238,226,0.08); font-size:0.82rem; color:var(--text-dim); line-height:1.6;}
+  .country-note b{color:var(--paper);}
+
+  /* ---------- AI suggestion ---------- */
+  .ai-suggestion{margin-top:26px; padding:24px 26px; border-radius:6px; background:rgba(95,167,156,0.07); border:1px solid rgba(95,167,156,0.28);}
+  .ai-suggestion-head{display:flex; align-items:center; gap:10px; margin-bottom:14px;}
+  .ai-icon{width:26px; height:26px; border-radius:50%; border:1px solid rgba(95,167,156,0.5); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+  .ai-badge{font-family:'IBM Plex Mono',monospace; font-size:0.66rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--teal);}
+  .ai-suggestion h4{font-family:'Fraunces',serif; font-weight:500; font-size:1.02rem; margin-bottom:8px;}
+  .ai-suggestion p{font-size:0.86rem; color:var(--text-dim); line-height:1.65; max-width:60ch;}
+  .ai-alt-list{margin-top:16px; display:flex; flex-direction:column; gap:7px;}
+  .ai-alt-label{font-family:'IBM Plex Mono',monospace; font-size:0.66rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); opacity:0.75; margin-bottom:2px;}
+  .ai-alt-row{display:flex; align-items:center; justify-content:space-between; font-size:0.82rem; padding:9px 13px; border-radius:4px; background:rgba(243,238,226,0.03); border:1px solid rgba(243,238,226,0.06);}
+  .ai-alt-row span:first-child{color:var(--paper);}
+  .ai-alt-score{font-family:'IBM Plex Mono',monospace; color:var(--amber);}
+  .ai-subheading{font-family:'IBM Plex Mono',monospace; font-size:0.66rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-dim); opacity:0.75; margin-top:18px; margin-bottom:8px;}
+  .ai-chip-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .ai-chip{font-family:'IBM Plex Mono',monospace; font-size:0.74rem; padding:6px 13px; border-radius:20px; background:rgba(243,238,226,0.05); border:1px solid rgba(243,238,226,0.15); color:var(--paper); white-space:nowrap;}
+  .ai-chip.match{border-color:rgba(95,167,156,0.5); color:var(--teal);}
+  .ai-alt-row.is-chosen{border-color:rgba(232,162,61,0.4);}
+  .ai-alt-row .ai-alt-tag{font-family:'IBM Plex Mono',monospace; font-size:0.66rem; color:var(--amber); margin-left:8px;}
+
+  .disclaimer{margin-top:20px; font-size:0.72rem; color:var(--text-dim); opacity:0.65; line-height:1.5;}
+
+  footer{position:relative; z-index:5; padding:26px 48px 34px; text-align:center; font-size:0.76rem; color:var(--text-dim);}
+
+  @media (max-width: 760px){
+    header{padding:20px 24px;}
+    main{padding:36px 20px 40px;}
+    .form-shell{padding:30px 22px 26px;}
+    .field-row{grid-template-columns:1fr;}
+    .result-inner{padding:28px 22px;}
+    footer{padding:22px 24px 28px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob-a"></div>
+<div class="blob blob-b"></div>
+<div class="blob blob-c"></div>
+<div class="blob blob-d"></div>
+<div class="grid-layer"></div>
+<canvas id="net"></canvas>
+
+<svg class="bg-signature" viewBox="0 0 200 200" fill="none" aria-hidden="true">
+  <polygon points="100,8 186,54 186,146 100,192 14,146 14,54" stroke="var(--amber)" stroke-width="1.4" stroke-dasharray="4 7"/>
+  <circle cx="100" cy="100" r="60" stroke="var(--teal)" stroke-width="1.2" opacity="0.8"/>
+  <circle cx="100" cy="40" r="4" fill="var(--amber)"/>
+  <circle cx="160" cy="100" r="3" fill="var(--teal)"/>
+</svg>
+
+<div class="bg-particle" style="left:9%; width:5px; height:5px; background:var(--amber); box-shadow:0 0 12px 3px rgba(232,162,61,0.6); animation-duration:17s; animation-delay:-2s; --drift:60px;"></div>
+<div class="bg-particle" style="left:24%; width:3px; height:3px; background:var(--teal); box-shadow:0 0 10px 3px rgba(95,167,156,0.6); animation-duration:23s; animation-delay:-9s; --drift:-40px;"></div>
+<div class="bg-particle" style="left:39%; width:4px; height:4px; background:var(--paper); box-shadow:0 0 10px 3px rgba(243,238,226,0.5); animation-duration:19s; animation-delay:-4s; --drift:30px;"></div>
+<div class="bg-particle" style="left:55%; width:6px; height:6px; background:var(--amber); box-shadow:0 0 14px 4px rgba(232,162,61,0.55); animation-duration:27s; animation-delay:-14s; --drift:-70px;"></div>
+<div class="bg-particle" style="left:68%; width:3px; height:3px; background:var(--teal); box-shadow:0 0 10px 3px rgba(95,167,156,0.6); animation-duration:16s; animation-delay:-6s; --drift:50px;"></div>
+<div class="bg-particle" style="left:80%; width:5px; height:5px; background:var(--paper); box-shadow:0 0 12px 3px rgba(243,238,226,0.5); animation-duration:24s; animation-delay:-1s; --drift:-30px;"></div>
+<div class="bg-particle" style="left:91%; width:4px; height:4px; background:var(--amber); box-shadow:0 0 12px 3px rgba(232,162,61,0.6); animation-duration:18s; animation-delay:-11s; --drift:40px;"></div>
+
+<div class="glow" id="glow"></div>
+<div class="vignette"></div>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-name">Global HDI <span>× Explainable AI</span></div>
+  </div>
+  <a href="start.html" class="back-link">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+    Back to start
+  </a>
+</header>
+
+<main>
+  <div class="eyebrow-line"><div class="rule"></div><span>Student intake</span></div>
+
+  <h1 class="kinetic">
+    <span class="line"><span class="word" style="animation-delay:.15s">Tell</span> <span class="word" style="animation-delay:.22s">us</span> <span class="word" style="animation-delay:.29s">about</span></span>
+    <span class="line"><span class="word" style="animation-delay:.36s"><em>your path.</em></span></span>
+  </h1>
+
+  <p class="sub">Seven quick questions about where you're starting from and where you want to go. We'll turn your answers into a readiness snapshot with a plain-language explanation for every factor.</p>
+
+  <div class="form-wrap">
+    <form class="form-shell" id="studentForm">
+
+      <!-- 1. Education qualification -->
+      <div class="section-block">
+        <div class="section-head">
+          <div class="section-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F3EEE2" stroke-width="1.5"><path d="M2 9l10-5 10 5-10 5-10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/></svg>
+          </div>
+          <div>
+            <h3>Education qualification</h3>
+            <p>Your highest completed level of education so far.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field full">
+            <label for="eduLevel">Highest qualification completed</label>
+            <select id="eduLevel" required>
+              <option value="">Select one…</option>
+              <option value="0.1">No formal education</option>
+              <option value="0.25">Primary school</option>
+              <option value="0.4">Secondary / high school</option>
+              <option value="0.55">Vocational diploma</option>
+              <option value="0.7">Bachelor's degree</option>
+              <option value="0.85">Master's degree</option>
+              <option value="1">Doctorate (PhD)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1b. Wanted education level -->
+      <div class="section-block">
+        <div class="section-head">
+          <div class="section-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F3EEE2" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="0.8" fill="#F3EEE2"/></svg>
+          </div>
+          <div>
+            <h3>Wanted education level abroad</h3>
+            <p>What you'd like to study for in the destination country.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field full">
+            <label for="targetEdu">Target level of study</label>
+            <select id="targetEdu" required>
+              <option value="">Select one…</option>
+              <option value="0.3">Language course only</option>
+              <option value="0.45">Vocational / diploma</option>
+              <option value="0.7">Bachelor's degree</option>
+              <option value="0.85">Master's degree</option>
+              <option value="1">Doctorate (PhD)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 1c. Field of study -->
+      <div class="section-block">
+        <div class="section-head">
+          <div class="section-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F3EEE2" stroke-width="1.5"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15z"/><path d="M4 5.5v15A2.5 2.5 0 0 1 6.5 18H20"/></svg>
+          </div>
+          <div>
+            <h3>Field of study</h3>
+            <p>The area you'd like to specialize in.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field full">
+            <label for="fieldOfStudy">Field of interest</label>
+            <select id="fieldOfStudy">
+              <option value="">Select one…</option>
+              <option value="computer_science">Computer Science &amp; IT</option>
+              <option value="data_science_ai">Data Science &amp; Artificial Intelligence</option>
+              <option value="engineering">Engineering &amp; Technology</option>
+              <option value="business">Business &amp; Management</option>
+              <option value="natural_sciences">Natural Sciences (Physics, Chemistry, Biology)</option>
+              <option value="social_sciences">Social Sciences &amp; Psychology</option>
+              <option value="arts_humanities">Arts, Humanities &amp; Design</option>
+              <option value="health_medicine">Health &amp; Medicine</option>
+              <option value="law_policy">Law &amp; Public Policy</option>
+              <option value="education">Education</option>
+            </select>
+            <span class="hint">Used by the AI Suggestion below to recommend subjects and countries — it doesn't affect your readiness score.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Monthly earnings -->
+      <div class="section-block">
+        <div class="section-head">
+          <div class="section-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F3EEE2" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M9.5 15.5c.5.9 1.4 1.5 2.5 1.5 1.7 0 3-1 3-2.2 0-3-5.8-1.4-5.8-4.4C9.2 9 10.6 8 12.2 8c1.1 0 2 .5 2.5 1.4M12 6.5v11"/></svg>
+          </div>
+          <div>
+            <h3>Monthly earnings</h3>
+            <p>Your current household income, so we can gauge financial readiness.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field full amount-field">
+            <label for="earnings">Monthly earnings (USD equivalent)</label>
+            <span class="prefix">$</span>
+            <input type="number" id="earnings" min="0" step="10" placeholder="e.g. 450" required>
+            <span class="hint">Rough estimate is fine — this only shapes the financial-readiness factor below.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Country choice -->
+      <div class="section-block">
+        <div class="section-head">
+          <div class="section-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F3EEE2" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.7 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.7-3.8-9S9.5 5.5 12 3z"/></svg>
+          </div>
+          <div>
+            <h3>Destination country</h3>
+            <p>Where you're hoping to study.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field full">
+            <label for="country">Country of interest</label>
+            <select id="country" required>
+              <option value="">Select a country…</option>
+              <option value="United States|1.0">United States</option>
+              <option value="United Kingdom|1.0">United Kingdom</option>
+              <option value="Canada|1.02">Canada</option>
+              <option value="Australia|1.0">Australia</option>
+              <option value="Germany|1.05">Germany</option>
+              <option value="Netherlands|1.02">Netherlands</option>
+              <option value="Sweden|1.03">Sweden</option>
+              <option value="Ireland|1.0">Ireland</option>
+              <option value="New Zealand|1.02">New Zealand</option>
+              <option value="Japan|0.97">Japan</option>
+              <option value="South Korea|0.97">South Korea</option>
+              <option value="Singapore|0.95">Singapore</option>
+              <option value="UAE|1.0">United Arab Emirates</option>
+              <option value="Malaysia|1.05">Malaysia</option>
+              <option value="France|1.0">France</option>
+              <option value="Italy|1.02">Italy</option>
+              <option value="Switzerland|0.93">Switzerland</option>
+              <option value="Turkey|1.08">Turkey</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Language level -->
+      <div class="section-block">
+        <div class="section-head">
+          <div class="section-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F3EEE2" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z"/></svg>
+          </div>
+          <div>
+            <h3>Language level</h3>
+            <p>Your comfort with the destination country's main language of instruction.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field full">
+            <label for="langLevel">Current language proficiency</label>
+            <select id="langLevel" required>
+              <option value="">Select one…</option>
+              <option value="0.15">None yet</option>
+              <option value="0.4">Beginner (A1–A2)</option>
+              <option value="0.65">Intermediate (B1–B2)</option>
+              <option value="0.85">Advanced (C1–C2)</option>
+              <option value="1">Native / fluent</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Health level -->
+      <div class="section-block">
+        <div class="section-head">
+          <div class="section-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F3EEE2" stroke-width="1.5"><path d="M20.8 8.6c0 4.6-8.8 10-8.8 10s-8.8-5.4-8.8-10a4.6 4.6 0 0 1 8.8-1.8 4.6 4.6 0 0 1 8.8 1.8z"/></svg>
+          </div>
+          <div>
+            <h3>Health level</h3>
+            <p>How you'd rate your general health today.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field full slider-field">
+            <div class="slider-top">
+              <label for="health">Self-rated general health</label>
+              <span class="slider-value" id="healthValue">3</span>
+            </div>
+            <input type="range" id="health" min="1" max="5" step="1" value="3">
+            <div class="slider-labels"><span>Poor</span><span>Fair</span><span>Good</span><span>Very good</span><span>Excellent</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Stress tolerance -->
+      <div class="section-block">
+        <div class="section-head">
+          <div class="section-icon">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F3EEE2" stroke-width="1.5"><path d="M2 12h4l2-7 4 14 3-9 2 5h5"/></svg>
+          </div>
+          <div>
+            <h3>Stress-taking ability</h3>
+            <p>How well you tend to handle pressure, change, and setbacks.</p>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field full slider-field">
+            <div class="slider-top">
+              <label for="stress">Self-rated stress tolerance</label>
+              <span class="slider-value" id="stressValue">3</span>
+            </div>
+            <input type="range" id="stress" min="1" max="5" step="1" value="3">
+            <div class="slider-labels"><span>Low</span><span>Below avg.</span><span>Average</span><span>Above avg.</span><span>High</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="submit-row">
+        <button type="submit" class="cta-btn"><span>Generate my readiness snapshot</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <div class="result-panel" id="resultPanel">
+    <div class="result-inner">
+      <div class="result-top">
+        <div>
+          <div class="result-eyebrow">Your snapshot</div>
+          <div class="score-display">
+            <span class="score-num" id="scoreNum">—</span>
+            <span class="score-tag" id="scoreTag">out of 100</span>
+          </div>
+        </div>
+        <p class="result-note" id="resultNote"></p>
+      </div>
+
+      <div class="factors" id="factorsList"></div>
+
+      <div class="country-note" id="countryNote"></div>
+
+      <div class="ai-suggestion" id="aiSuggestion">
+        <div class="ai-suggestion-head">
+          <div class="ai-icon">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5FA79C" stroke-width="1.8"><path d="M12 2l2.2 6.5L21 11l-6.8 2.5L12 20l-2.2-6.5L3 11l6.8-2.5L12 2z"/></svg>
+          </div>
+          <span class="ai-badge">AI Suggestion</span>
+        </div>
+        <h4 id="aiSuggestionTitle"></h4>
+        <p id="aiSuggestionText"></p>
+
+        <div class="ai-subheading" id="aiSubjectsLabel">Suggested subjects</div>
+        <div class="ai-chip-row" id="aiSubjectsList"></div>
+
+        <div class="ai-alt-list" id="aiAltListWrap">
+          <div class="ai-alt-label" id="aiAltLabel">Countries worth considering for this field</div>
+          <div id="aiAltList" style="display:flex; flex-direction:column; gap:7px;"></div>
+        </div>
+      </div>
+
+      <div class="disclaimer">This snapshot is a simplified, illustrative model built for this project — not an official assessment of visa, admission, or migration outcomes.</div>
+    </div>
+  </div>
+</main>
+
+<footer>Global HDI × Explainable AI — Final Year Project, 2026</footer>
+
+<script>
+(function(){
+  var reduceMotion = false;
+  try { reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch(e){ reduceMotion = false; }
+
+  /* ---- glow follows cursor ---- */
+  var glow = document.getElementById('glow');
+  window.addEventListener('mousemove', function(e){
+    glow.style.setProperty('--mx', e.clientX + 'px');
+    glow.style.setProperty('--my', e.clientY + 'px');
+  });
+
+  /* ---- slider live values ---- */
+  function initSlider(input, valueEl){
+    function sync(){
+      var min = parseFloat(input.min), max = parseFloat(input.max), val = parseFloat(input.value);
+      var pct = ((val - min) / (max - min)) * 100;
+      input.style.setProperty('--val', pct + '%');
+      valueEl.textContent = input.value;
+    }
+    input.addEventListener('input', sync);
+    sync();
+  }
+
+  var health = document.getElementById('health');
+  var healthValue = document.getElementById('healthValue');
+  initSlider(health, healthValue);
+
+  var stress = document.getElementById('stress');
+  var stressValue = document.getElementById('stressValue');
+  initSlider(stress, stressValue);
+
+  /* ---- form submit: compute readiness snapshot ---- */
+  var form = document.getElementById('studentForm');
+  var resultPanel = document.getElementById('resultPanel');
+
+  /* Country list mirrored from the <select id="country"> options, used so the
+     AI suggestion can score every destination on the same profile and compare. */
+  var COUNTRIES = [
+    { code:'United States', display:'United States', mod:1.0 },
+    { code:'United Kingdom', display:'United Kingdom', mod:1.0 },
+    { code:'Canada', display:'Canada', mod:1.02 },
+    { code:'Australia', display:'Australia', mod:1.0 },
+    { code:'Germany', display:'Germany', mod:1.05 },
+    { code:'Netherlands', display:'Netherlands', mod:1.02 },
+    { code:'Sweden', display:'Sweden', mod:1.03 },
+    { code:'Ireland', display:'Ireland', mod:1.0 },
+    { code:'New Zealand', display:'New Zealand', mod:1.02 },
+    { code:'Japan', display:'Japan', mod:0.97 },
+    { code:'South Korea', display:'South Korea', mod:0.97 },
+    { code:'Singapore', display:'Singapore', mod:0.95 },
+    { code:'UAE', display:'United Arab Emirates', mod:1.0 },
+    { code:'Malaysia', display:'Malaysia', mod:1.05 },
+    { code:'France', display:'France', mod:1.0 },
+    { code:'Italy', display:'Italy', mod:1.02 },
+    { code:'Switzerland', display:'Switzerland', mod:0.93 },
+    { code:'Turkey', display:'Turkey', mod:1.08 }
+  ];
+
+  /* Subject and country knowledge base for the AI Suggestion section.
+     strongCountries reference the same codes used in COUNTRIES above. */
+  var FIELDS = {
+    computer_science: {
+      label: 'Computer Science & IT',
+      masters: ['MSc Computer Science', 'MSc Cybersecurity', 'MSc Software Engineering', 'MSc Cloud Computing'],
+      phd: ['PhD in Computer Science', 'PhD in Human-Computer Interaction', 'PhD in Computer Systems'],
+      undergrad: ['BSc Computer Science', 'BSc Information Technology', 'BSc Software Engineering'],
+      strongCountries: ['United States', 'Germany', 'Switzerland', 'Singapore', 'Canada']
+    },
+    data_science_ai: {
+      label: 'Data Science & Artificial Intelligence',
+      masters: ['MSc Data Science', 'MSc Artificial Intelligence', 'MSc Machine Learning', 'MSc Applied Statistics'],
+      phd: ['PhD in Artificial Intelligence', 'PhD in Statistics', 'PhD in Computational Science'],
+      undergrad: ['BSc Data Science', 'BSc Statistics', 'BSc Computer Science with AI'],
+      strongCountries: ['United States', 'Canada', 'Germany', 'Singapore', 'Switzerland']
+    },
+    engineering: {
+      label: 'Engineering & Technology',
+      masters: ['MSc Mechanical Engineering', 'MSc Electrical Engineering', 'MSc Civil Engineering', 'MEng Robotics'],
+      phd: ['PhD in Mechanical Engineering', 'PhD in Robotics', 'PhD in Materials Science'],
+      undergrad: ['BEng Mechanical Engineering', 'BEng Electrical Engineering', 'BEng Civil Engineering'],
+      strongCountries: ['Germany', 'Switzerland', 'United States', 'South Korea', 'Sweden']
+    },
+    business: {
+      label: 'Business & Management',
+      masters: ['MSc International Business', 'MBA', 'MSc Finance', 'MSc Marketing'],
+      phd: ['PhD in Management', 'PhD in Finance', 'PhD in Economics'],
+      undergrad: ['BBA', 'BSc Business Administration', 'BSc Economics'],
+      strongCountries: ['United States', 'United Kingdom', 'Switzerland', 'Singapore', 'France']
+    },
+    natural_sciences: {
+      label: 'Natural Sciences',
+      masters: ['MSc Physics', 'MSc Chemistry', 'MSc Biology', 'MSc Environmental Science'],
+      phd: ['PhD in Physics', 'PhD in Chemistry', 'PhD in Molecular Biology'],
+      undergrad: ['BSc Physics', 'BSc Chemistry', 'BSc Biology'],
+      strongCountries: ['Germany', 'Switzerland', 'United States', 'Sweden', 'Netherlands']
+    },
+    social_sciences: {
+      label: 'Social Sciences & Psychology',
+      masters: ['MSc Psychology', 'MA Sociology', 'MSc Political Science', 'MA International Relations'],
+      phd: ['PhD in Psychology', 'PhD in Sociology', 'PhD in Political Science'],
+      undergrad: ['BA Psychology', 'BA Sociology', 'BA Political Science'],
+      strongCountries: ['United Kingdom', 'Netherlands', 'United States', 'Australia', 'Sweden']
+    },
+    arts_humanities: {
+      label: 'Arts, Humanities & Design',
+      masters: ['MA History', 'MA Linguistics', 'MA Design', 'MA Fine Arts'],
+      phd: ['PhD in History', 'PhD in Linguistics', 'PhD in Philosophy'],
+      undergrad: ['BA History', 'BA English Literature', 'BA Fine Arts'],
+      strongCountries: ['United Kingdom', 'Italy', 'France', 'Netherlands', 'United States']
+    },
+    health_medicine: {
+      label: 'Health & Medicine',
+      masters: ['MSc Public Health', 'MSc Nursing', 'MSc Biomedical Science', 'MSc Nutrition'],
+      phd: ['PhD in Public Health', 'PhD in Biomedical Science', 'PhD in Epidemiology'],
+      undergrad: ['BSc Nursing', 'BSc Public Health', 'BSc Biomedical Science'],
+      strongCountries: ['United States', 'United Kingdom', 'Australia', 'Canada', 'Sweden']
+    },
+    law_policy: {
+      label: 'Law & Public Policy',
+      masters: ['LLM International Law', 'MSc Public Policy', 'MA Human Rights Law'],
+      phd: ['PhD in Law', 'PhD in Public Policy'],
+      undergrad: ['LLB Law', 'BA Political Science & Law'],
+      strongCountries: ['United Kingdom', 'United States', 'Netherlands', 'Germany', 'Switzerland']
+    },
+    education: {
+      label: 'Education',
+      masters: ['MA Education', 'MSc Educational Psychology', 'MA TESOL', 'MSc Curriculum & Instruction'],
+      phd: ['PhD in Education', 'PhD in Educational Leadership'],
+      undergrad: ['BEd Education', 'BA Elementary Education'],
+      strongCountries: ['United Kingdom', 'United States', 'Australia', 'Canada', 'Sweden']
+    }
+  };
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+
+    var eduVal = parseFloat(document.getElementById('eduLevel').value);
+    var earningsRaw = parseFloat(document.getElementById('earnings').value);
+    var countryRaw = document.getElementById('country').value;
+    var langVal = parseFloat(document.getElementById('langLevel').value);
+    var targetVal = parseFloat(document.getElementById('targetEdu').value);
+    var fieldOfStudyKey = document.getElementById('fieldOfStudy').value;
+    var programLevel = targetVal >= 1 ? 'phd' : (targetVal >= 0.85 ? 'graduate' : (targetVal >= 0.7 ? 'undergraduate' : ''));
+    var healthVal = parseFloat(health.value);
+    var stressVal = parseFloat(stress.value);
+
+    if(!eduVal || isNaN(earningsRaw) || !countryRaw || !langVal || !targetVal){
+      form.reportValidity();
+      return;
+    }
+
+    var countryParts = countryRaw.split('|');
+    var countryName = countryParts[0];
+    var countryMod = parseFloat(countryParts[1]);
+
+    var earningsNorm = Math.max(0, Math.min(1, earningsRaw / 3000));
+    var healthNorm = (healthVal - 1) / 4;
+    var stressNorm = (stressVal - 1) / 4;
+
+    var weights = {
+      edu: 0.20,
+      earnings: 0.15,
+      lang: 0.22,
+      target: 0.10,
+      health: 0.17,
+      stress: 0.16
+    };
+
+    var contributions = {
+      edu: eduVal * weights.edu,
+      earnings: earningsNorm * weights.earnings,
+      lang: langVal * weights.lang,
+      target: targetVal * weights.target,
+      health: healthNorm * weights.health,
+      stress: stressNorm * weights.stress
+    };
+
+    var rawTotal = 0;
+    for(var k in contributions){ rawTotal += contributions[k]; }
+    var score = Math.round(Math.max(0, Math.min(1, rawTotal * countryMod)) * 100);
+
+    var tag = 'Early stage';
+    var note = 'A few key areas — especially language and financial readiness — will make the biggest difference to your path forward.';
+    if(score >= 75){
+      tag = 'Strong fit';
+      note = 'Your profile lines up well across most factors. Language proficiency and financial readiness are typically the two worth double-checking closest to application time.';
+    } else if(score >= 55){
+      tag = 'Developing fit';
+      note = 'You have a solid foundation. Strengthening one or two factors below — often language level or savings — would meaningfully improve your readiness.';
+    } else if(score >= 35){
+      tag = 'Building stage';
+      note = 'There\'s a clear path here, but a few factors need more groundwork first. Focus on the lowest bars below.';
+    }
+
+    document.getElementById('scoreNum').textContent = score;
+    document.getElementById('scoreTag').textContent = tag;
+    document.getElementById('resultNote').textContent = note;
+
+    var factorMeta = [
+      { key:'edu', label:'Educational foundation', value:eduVal, color:'var(--teal)' },
+      { key:'lang', label:'Language proficiency', value:langVal, color:'var(--amber)' },
+      { key:'earnings', label:'Financial readiness', value:earningsNorm, color:'var(--teal)' },
+      { key:'target', label:'Ambition alignment', value:targetVal, color:'var(--amber)' },
+      { key:'health', label:'Health resilience', value:healthNorm, color:'var(--teal)' },
+      { key:'stress', label:'Stress tolerance', value:stressNorm, color:'var(--amber)' }
+    ];
+
+    var list = document.getElementById('factorsList');
+    list.innerHTML = '';
+    factorMeta.forEach(function(f){
+      var pct = Math.round(f.value * 100);
+      var row = document.createElement('div');
+      row.innerHTML =
+        '<div class="factor-label"><span>' + f.label + '</span><b>' + pct + '%</b></div>' +
+        '<div class="factor-track"><div class="factor-fill" style="background:' + f.color + '"></div></div>';
+      list.appendChild(row);
+      var fill = row.querySelector('.factor-fill');
+      requestAnimationFrame(function(){ fill.style.width = pct + '%'; });
+    });
+
+    var modPct = Math.round((countryMod - 1) * 100);
+    var modText = modPct === 0
+      ? 'has a neutral effect on this score.'
+      : (modPct > 0 ? 'adds roughly ' + modPct + '% to this score, reflecting comparatively accessible pathways.' : 'reduces this score by roughly ' + Math.abs(modPct) + '%, reflecting a more competitive pathway.');
+    document.getElementById('countryNote').innerHTML = '<b>' + countryName + '</b> ' + modText;
+
+    /* ---- AI suggestion: score every country on this same profile and compare ---- */
+    var allScores = COUNTRIES.map(function(c){
+      var s = Math.round(Math.max(0, Math.min(1, rawTotal * c.mod)) * 100);
+      return { code:c.code, display:c.display, score:s };
+    });
+    allScores.sort(function(a, b){ return b.score - a.score; });
+
+    var chosenEntry = null;
+    for(var ci=0; ci<allScores.length; ci++){
+      if(allScores[ci].code === countryParts[0]){ chosenEntry = allScores[ci]; break; }
+    }
+    var chosenDisplay = chosenEntry ? chosenEntry.display : countryName;
+    var best = allScores[0];
+    var CLOSE_MARGIN = 3;
+    var field = FIELDS[fieldOfStudyKey];
+    var PROGRAM_LABELS = { undergraduate: "Undergraduate", graduate: "Master's", phd: 'PhD' };
+    var PROGRAM_KEYS = { undergraduate: 'undergrad', graduate: 'masters', phd: 'phd' };
+    var programLabel = PROGRAM_LABELS[programLevel] || '';
+    var subjectKey = PROGRAM_KEYS[programLevel] || 'masters';
+
+    var aiTitle, aiText;
+    if(chosenEntry && best.code === chosenEntry.code){
+      aiTitle = 'Your choice checks out';
+      aiText = chosenDisplay + ' comes out on top among the ' + COUNTRIES.length + ' countries in this model, scoring ' + chosenEntry.score + '.';
+      if(allScores[1]){
+        aiText += ' The nearest alternative is ' + allScores[1].display + ' at ' + allScores[1].score + ', so your pick looks well matched to your profile.';
+      }
+    } else if(chosenEntry && (best.score - chosenEntry.score) <= CLOSE_MARGIN){
+      aiTitle = 'Your choice holds up well';
+      aiText = chosenDisplay + ' scores ' + chosenEntry.score + ', only ' + (best.score - chosenEntry.score) + ' point' + ((best.score - chosenEntry.score) === 1 ? '' : 's') + ' behind the top-scoring option, ' + best.display + ' (' + best.score + '). That gap is small enough that other things — cost of living, community, personal goals — should probably weigh more in your decision.';
+    } else {
+      aiTitle = 'A stronger option may exist';
+      aiText = 'Based on your profile, ' + best.display + ' scores ' + best.score + ' in this model, ' + (best.score - (chosenEntry ? chosenEntry.score : 0)) + ' points higher than ' + chosenDisplay + (chosenEntry ? ' (' + chosenEntry.score + ')' : '') + '. It could be worth comparing both before you commit.';
+    }
+    if(field){
+      aiText += ' For ' + (programLabel ? programLabel + ' study in ' : '') + field.label + ', here are subjects and destinations worth researching further.';
+    }
+
+    document.getElementById('aiSuggestionTitle').textContent = aiTitle;
+    document.getElementById('aiSuggestionText').textContent = aiText;
+
+    /* Subject chips for the chosen field, filtered to the chosen program level */
+    var subjectsLabel = document.getElementById('aiSubjectsLabel');
+    var subjectsWrap = document.getElementById('aiSubjectsList');
+    subjectsWrap.innerHTML = '';
+
+    if(field && programLabel){
+      subjectsLabel.textContent = 'Suggested ' + programLabel + ' subjects';
+      (field[subjectKey] || []).forEach(function(subj){
+        var chip = document.createElement('span');
+        chip.className = 'ai-chip';
+        chip.textContent = subj;
+        subjectsWrap.appendChild(chip);
+      });
+    } else if(field){
+      subjectsLabel.textContent = 'Suggested subjects';
+      subjectsWrap.innerHTML = '<span class="ai-chip">Select a program level above to see subject suggestions</span>';
+    } else {
+      subjectsLabel.textContent = 'Suggested subjects';
+      subjectsWrap.innerHTML = '<span class="ai-chip">Select a field of study above to see subject suggestions</span>';
+    }
+
+    /* Country list: countries known for strength in the chosen field, scored against this profile */
+    var altLabel = document.getElementById('aiAltLabel');
+    var altList = document.getElementById('aiAltList');
+    altList.innerHTML = '';
+
+    var candidateCodes = field ? field.strongCountries : allScores.slice(0, 5).map(function(c){ return c.code; });
+    altLabel.textContent = field ? ('Countries worth considering for ' + field.label) : 'Countries worth considering';
+
+    var candidateScores = candidateCodes.map(function(code){
+      var entry = null;
+      for(var i=0; i<allScores.length; i++){ if(allScores[i].code === code){ entry = allScores[i]; break; } }
+      return entry;
+    }).filter(Boolean);
+    candidateScores.sort(function(a, b){ return b.score - a.score; });
+
+    candidateScores.forEach(function(c){
+      var row = document.createElement('div');
+      row.className = 'ai-alt-row' + (c.code === countryParts[0] ? ' is-chosen' : '');
+      row.innerHTML = '<span>' + c.display + (c.code === countryParts[0] ? '<span class="ai-alt-tag">your pick</span>' : '') + '</span><span class="ai-alt-score">' + c.score + '</span>';
+      altList.appendChild(row);
+    });
+
+    resultPanel.classList.add('visible');
+    resultPanel.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+  });
+
+  /* ---- ambient particle network (matches homepage) ---- */
+  var canvas = document.getElementById('net');
+  var ctx = canvas.getContext('2d');
+  var W, H, DPR = Math.min(window.devicePixelRatio || 1, 2);
+  var points = [];
+  var dust = [];
+  var comets = [];
+  var mouse = { x: -9999, y: -9999 };
+  var colors = ['#E8A23D', '#5FA79C', '#F3EEE2'];
+  var COUNT = 80;
+  var DUST_COUNT = 40;
+  var LINK_DIST = 130;
+  var MOUSE_RADIUS = 140;
+
+  function resize(){
+    W = canvas.width = window.innerWidth * DPR;
+    H = canvas.height = window.innerHeight * DPR;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+  }
+
+  function init(){
+    resize();
+    points = []; dust = []; comets = [];
+    for(var i=0;i<COUNT;i++){
+      points.push({
+        x: Math.random() * W, y: Math.random() * H,
+        vx: (Math.random()-0.5) * 0.25 * DPR, vy: (Math.random()-0.5) * 0.25 * DPR,
+        r: (Math.random()*1.6 + 0.8) * DPR, c: colors[Math.floor(Math.random()*colors.length)],
+        pulse: Math.random() * Math.PI * 2
+      });
+    }
+    for(var i=0;i<DUST_COUNT;i++){
+      dust.push({
+        x: Math.random() * W, y: Math.random() * H,
+        vx: (Math.random()-0.5) * 0.06 * DPR, vy: (Math.random()-0.5) * 0.06 * DPR,
+        r: (Math.random()*2.2 + 1) * DPR
+      });
+    }
+  }
+
+  function maybeSpawnComet(a, b){
+    if(comets.length > 5) return;
+    if(Math.random() > 0.0025) return;
+    comets.push({ a:a, b:b, t:0 });
+  }
+
+  function step(){
+    ctx.clearRect(0,0,W,H);
+    for(var i=0;i<dust.length;i++){
+      var d = dust[i];
+      d.x += d.vx; d.y += d.vy;
+      if(d.x < 0) d.x = W; if(d.x > W) d.x = 0;
+      if(d.y < 0) d.y = H; if(d.y > H) d.y = 0;
+      ctx.beginPath(); ctx.arc(d.x, d.y, d.r, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(159,179,196,0.28)'; ctx.fill();
+    }
+    for(var i=0;i<points.length;i++){
+      var p = points[i];
+      p.x += p.vx; p.y += p.vy;
+      if(p.x < 0 || p.x > W) p.vx *= -1;
+      if(p.y < 0 || p.y > H) p.vy *= -1;
+      var dx = p.x - mouse.x, dy = p.y - mouse.y;
+      var dist = Math.sqrt(dx*dx + dy*dy);
+      if(dist < MOUSE_RADIUS * DPR){
+        var force = (1 - dist/(MOUSE_RADIUS*DPR)) * 0.6;
+        p.x += (dx/dist) * force * DPR; p.y += (dy/dist) * force * DPR;
+      }
+      p.pulse += 0.02;
+    }
+    for(var i=0;i<points.length;i++){
+      for(var j=i+1;j<points.length;j++){
+        var a = points[i], b = points[j];
+        var dx = a.x - b.x, dy = a.y - b.y;
+        var d = Math.sqrt(dx*dx+dy*dy);
+        if(d < LINK_DIST * DPR){
+          ctx.strokeStyle = 'rgba(159,179,196,' + (0.16 * (1 - d/(LINK_DIST*DPR))) + ')';
+          ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+          maybeSpawnComet(a, b);
+        }
+      }
+    }
+    for(var i=comets.length-1;i>=0;i--){
+      var cm = comets[i];
+      cm.t += 0.02;
+      if(cm.t >= 1){ comets.splice(i,1); continue; }
+      var cx = cm.a.x + (cm.b.x - cm.a.x) * cm.t;
+      var cy = cm.a.y + (cm.b.y - cm.a.y) * cm.t;
+      var fade = Math.sin(cm.t * Math.PI);
+      ctx.beginPath(); ctx.arc(cx, cy, 2.4 * DPR, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(232,162,61,' + fade + ')';
+      ctx.shadowColor = 'rgba(232,162,61,0.9)'; ctx.shadowBlur = 8 * DPR;
+      ctx.fill(); ctx.shadowBlur = 0;
+    }
+    for(var i=0;i<points.length;i++){
+      var p = points[i];
+      var glowR = p.r + Math.sin(p.pulse) * 0.6 * DPR;
+      ctx.beginPath(); ctx.arc(p.x, p.y, glowR, 0, Math.PI*2);
+      ctx.fillStyle = p.c; ctx.globalAlpha = 0.75; ctx.fill(); ctx.globalAlpha = 1;
+    }
+    if(!reduceMotion) requestAnimationFrame(step);
+  }
+
+  window.addEventListener('mousemove', function(e){ mouse.x = e.clientX * DPR; mouse.y = e.clientY * DPR; });
+  window.addEventListener('mouseleave', function(){ mouse.x = -9999; mouse.y = -9999; });
+  window.addEventListener('resize', function(){ resize(); });
+
+  init();
+  if(reduceMotion){ step(); } else { requestAnimationFrame(step); }
+})();
+</script>
+
+</body>
+</html>
