@@ -286,6 +286,33 @@
   .qa-item h3 span{ color:#B97A1F; font-family:'IBM Plex Mono',monospace; font-size:0.85rem; }
   .qa-item p{ color:#4C5A66; font-size:0.92rem; line-height:1.65; }
 
+    /* ---------- moving arrow ---------- */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #cfd8dc;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  text-decoration: none;
+  letter-spacing: 1px;
+}
+
+.back-link:hover {
+  color: #ffffff;
+}
+
+.arrow {
+  font-size: 18px;
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.back-link:hover .arrow {
+  transform: translateX(-4px);
+}
+
+  
   /* ---------- wave dividers between sections ---------- */
   .wave{
     position:absolute; left:0; width:100%; line-height:0;
@@ -333,24 +360,7 @@
     .wave svg{height:36px;}
     footer{padding:32px 24px; flex-direction:column; align-items:flex-start;}
   }
-  .back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: #cfd8dc;
-  font-family: 'Courier New', monospace;
-  font-size: 16px;
-  text-decoration: none;
-  letter-spacing: 1px;
-}
-
-.back-link:hover {
-  color: #ffffff;
-}
-
-.arrow {
-  font-size: 18px;
-}
+  
 
   /* ---------- stacked scroll sections (curtain-cover effect) ---------- */
   main{ position:relative; }
