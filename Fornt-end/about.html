@@ -204,6 +204,33 @@
   section{padding:60px 48px 100px;}
   .section-inner{max-width:1280px; margin:0 auto;}
 
+  .back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #cfd8dc;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  text-decoration: none;
+  letter-spacing: 1px;
+}
+
+ /* ---------- moving arrow---------- */
+
+.back-link:hover {
+  color: #ffffff;
+}
+
+.arrow {
+  font-size: 18px;
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.back-link:hover .arrow {
+  transform: translateX(-4px);
+}
+
   /* ---------- team ---------- */
   .team-grid{
     display:grid; grid-template-columns:1fr 1fr; gap:28px;
@@ -374,7 +401,9 @@
   </div>
   <nav>
     <ul id="navList">
-      <li><a href="index.html">Back Home</a></li>
+     <a href="#" class="back-link">
+  <span class="arrow">&#8592;</span> Back home
+</a>
     </ul>
   </nav>
   <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false" aria-controls="navList">
