@@ -333,6 +333,24 @@
     .wave svg{height:36px;}
     footer{padding:32px 24px; flex-direction:column; align-items:flex-start;}
   }
+  .back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #cfd8dc;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  text-decoration: none;
+  letter-spacing: 1px;
+}
+
+.back-link:hover {
+  color: #ffffff;
+}
+
+.arrow {
+  font-size: 18px;
+}
 
   /* ---------- stacked scroll sections (curtain-cover effect) ---------- */
   main{ position:relative; }
@@ -404,8 +422,8 @@
   <nav>
     <ul id="navList">
      <a href="index.html" class="back-link">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-    Back home
+  <span class="arrow">&#8592;</span> Back home
+</a>
   </a>
     </ul>
   </nav>
