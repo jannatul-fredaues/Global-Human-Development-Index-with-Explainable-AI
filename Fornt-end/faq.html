@@ -218,7 +218,33 @@
     background:rgba(232,162,61,0.12); color:var(--paper);
     padding:2px 6px; border-radius:3px;
   }
+/* ---------- moving arrow ---------- */
+  .back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #cfd8dc;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  text-decoration: none;
+  letter-spacing: 1px;
+}
 
+.back-link:hover {
+  color: #ffffff;
+}
+
+.arrow {
+  font-size: 18px;
+  display: inline-block;
+  transition: transform 0.2s ease;
+}
+
+.back-link:hover .arrow {
+  transform: translateX(-4px);
+}
+
+  
   /* ---------- still stuck panel ---------- */
   .still-stuck{
     margin-top:64px;
