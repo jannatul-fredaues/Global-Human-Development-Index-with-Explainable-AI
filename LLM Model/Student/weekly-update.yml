@@ -23,10 +23,13 @@ jobs:
       - name: Run update script
         run: python update_dataset.py
 
-      - name: Commit and push updated dataset
+      - name: Train candidate models and select the best
+        run: python train_and_select_model.py
+
+      - name: Commit and push updated dataset and model
         run: |
           git config user.name "dataset-bot"
           git config user.email "dataset-bot@users.noreply.github.com"
-          git add student_dataset.xlsx update_log.txt
-          git diff --cached --quiet || git commit -m "Weekly automated dataset update"
+          git add student_dataset.xlsx update_log.txt best_model.joblib model_leaderboard.json
+          git diff --cached --quiet || git commit -m "Weekly automated dataset + model update"
           git push
