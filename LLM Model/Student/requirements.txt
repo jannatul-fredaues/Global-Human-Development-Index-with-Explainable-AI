@@ -2,3 +2,5 @@ pandas
 numpy
 openpyxl
 requests
+scikit-learn
+joblib
