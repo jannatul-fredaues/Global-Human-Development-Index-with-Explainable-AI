@@ -13,6 +13,21 @@ No paid API or API key required.
    so they're not exact duplicates. This keeps the real joint correlations
    in the data intact without needing any LLM call or network access for
    that step.
+3. **Model training and selection** — trains five candidate regression
+   models (linear regression, ridge, k-nearest neighbors, random forest,
+   gradient boosting) to predict `Readiness_Score_0to100` on the
+   just-updated data, scores each on a held-out test split, and saves
+   whichever wins as `best_model.joblib`. This reruns from scratch every
+   week, so the "best" model isn't fixed — a different candidate can win
+   next week if the data shifts.
+
+## Files produced
+- `best_model.joblib` — the winning model as a ready-to-use sklearn
+  Pipeline (preprocessing bundled in). Your website loads this one file
+  and calls `.predict()` — see `predict_example.py`.
+- `model_leaderboard.json` — every candidate's RMSE/MAE/R² and which one
+  was selected, timestamped.
+- `update_log.txt` — one line per run: row count and rows added.
 
 ## Setup
 1. Push this folder (including `student_dataset.xlsx`) to a GitHub repo.
@@ -25,6 +40,8 @@ No paid API or API key required.
 ```bash
 pip install -r requirements.txt
 python update_dataset.py
+python train_and_select_model.py
+python predict_example.py   # sanity-check the saved model loads and predicts
 ```
 
 ## Notes
