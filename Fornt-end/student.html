@@ -603,13 +603,13 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F3EEE2" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z"/></svg>
           </div>
           <div>
-            <h3>Language level</h3>
-            <p>Your comfort with the destination country's main language of instruction.</p>
+            <h3 id="langSectionTitle">Language level</h3>
+            <p id="langSectionDesc">Pick a destination country above to see the language it counts here.</p>
           </div>
         </div>
         <div class="field-row">
           <div class="field full">
-            <label for="langLevel">Current language proficiency</label>
+            <label for="langLevel" id="langFieldLabel">Current language proficiency</label>
             <select id="langLevel" required>
               <option value="">Select one…</option>
               <option value="0.15">None yet</option>
@@ -618,6 +618,7 @@
               <option value="0.85">Advanced (C1–C2)</option>
               <option value="1">Native / fluent</option>
             </select>
+            <span class="hint" id="langFieldHint">Select a destination country first.</span>
           </div>
         </div>
       </div>
@@ -754,6 +755,113 @@
   /* ---- form submit: compute readiness snapshot ---- */
   var form = document.getElementById('studentForm');
   var resultPanel = document.getElementById('resultPanel');
+
+  /* Main language of instruction / national language per destination, plus the
+     standardized proficiency test most commonly referenced for that language
+     (null where there's no single widely-used international test — those
+     countries are still scored on the same CEFR-style A1–C2 scale below). */
+  var LANGUAGE_BY_COUNTRY = {
+    'Afghanistan': ['Dari/Pashto', null], 'Albania': ['Albanian', null], 'Algeria': ['Arabic', null],
+    'Andorra': ['Catalan', null], 'Angola': ['Portuguese', 'CAPLE'], 'Antigua and Barbuda': ['English', 'IELTS/TOEFL'],
+    'Argentina': ['Spanish', 'DELE/SIELE'], 'Armenia': ['Armenian', null], 'Australia': ['English', 'IELTS/TOEFL'],
+    'Austria': ['German', 'TestDaF/Goethe-Zertifikat'], 'Azerbaijan': ['Azerbaijani', null], 'Bahamas': ['English', 'IELTS/TOEFL'],
+    'Bahrain': ['Arabic', null], 'Bangladesh': ['Bengali', null], 'Barbados': ['English', 'IELTS/TOEFL'],
+    'Belarus': ['Russian', 'TORFL'], 'Belgium': ['Dutch/French', 'NT2 / DELF-DALF'], 'Belize': ['English', 'IELTS/TOEFL'],
+    'Benin': ['French', 'DELF/DALF'], 'Bhutan': ['Dzongkha', null], 'Bolivia': ['Spanish', 'DELE/SIELE'],
+    'Bosnia and Herzegovina': ['Bosnian', null], 'Botswana': ['English', 'IELTS/TOEFL'], 'Brazil': ['Portuguese', 'CELPE-Bras'],
+    'Brunei': ['Malay', null], 'Bulgaria': ['Bulgarian', null], 'Burkina Faso': ['French', 'DELF/DALF'],
+    'Burundi': ['French', 'DELF/DALF'], 'Cambodia': ['Khmer', null], 'Cameroon': ['French/English', 'DELF-DALF / IELTS'],
+    'Canada': ['English/French', 'IELTS/TOEFL / DELF-DALF'], 'Cape Verde': ['Portuguese', 'CAPLE'], 'Central African Republic': ['French', 'DELF/DALF'],
+    'Chad': ['French/Arabic', 'DELF/DALF'], 'Chile': ['Spanish', 'DELE/SIELE'], 'China': ['Chinese (Mandarin)', 'HSK'],
+    'Colombia': ['Spanish', 'DELE/SIELE'], 'Comoros': ['French', 'DELF/DALF'], 'Congo': ['French', 'DELF/DALF'],
+    'Costa Rica': ['Spanish', 'DELE/SIELE'], "Cote d'Ivoire": ['French', 'DELF/DALF'], 'Croatia': ['Croatian', null],
+    'Cuba': ['Spanish', 'DELE/SIELE'], 'Cyprus': ['Greek', null], 'Czechia': ['Czech', null],
+    'Democratic Republic of Congo': ['French', 'DELF/DALF'], 'Denmark': ['Danish', null], 'Djibouti': ['French/Arabic', 'DELF/DALF'],
+    'Dominica': ['English', 'IELTS/TOEFL'], 'Dominican Republic': ['Spanish', 'DELE/SIELE'], 'East Timor': ['Portuguese', 'CAPLE'],
+    'Ecuador': ['Spanish', 'DELE/SIELE'], 'Egypt': ['Arabic', null], 'El Salvador': ['Spanish', 'DELE/SIELE'],
+    'Equatorial Guinea': ['Spanish', 'DELE/SIELE'], 'Eritrea': ['Tigrinya', null], 'Estonia': ['Estonian', null],
+    'Eswatini': ['English', 'IELTS/TOEFL'], 'Ethiopia': ['Amharic', null], 'Fiji': ['English', 'IELTS/TOEFL'],
+    'Finland': ['Finnish', null], 'France': ['French', 'DELF/DALF'], 'Gabon': ['French', 'DELF/DALF'],
+    'Gambia': ['English', 'IELTS/TOEFL'], 'Georgia': ['Georgian', null], 'Germany': ['German', 'TestDaF/Goethe-Zertifikat'],
+    'Ghana': ['English', 'IELTS/TOEFL'], 'Greece': ['Greek', null], 'Grenada': ['English', 'IELTS/TOEFL'],
+    'Guatemala': ['Spanish', 'DELE/SIELE'], 'Guinea': ['French', 'DELF/DALF'], 'Guinea-Bissau': ['Portuguese', 'CAPLE'],
+    'Guyana': ['English', 'IELTS/TOEFL'], 'Haiti': ['French', 'DELF/DALF'], 'Honduras': ['Spanish', 'DELE/SIELE'],
+    'Hong Kong': ['Cantonese/English', 'IELTS/TOEFL'], 'Hungary': ['Hungarian', null], 'Iceland': ['Icelandic', null],
+    'India': ['Hindi/English', 'IELTS/TOEFL'], 'Indonesia': ['Indonesian', null], 'Iran': ['Persian (Farsi)', null],
+    'Iraq': ['Arabic', null], 'Ireland': ['English', 'IELTS/TOEFL'], 'Israel': ['Hebrew', null],
+    'Italy': ['Italian', 'CILS/CELI'], 'Jamaica': ['English', 'IELTS/TOEFL'], 'Japan': ['Japanese', 'JLPT'],
+    'Jordan': ['Arabic', null], 'Kazakhstan': ['Kazakh/Russian', 'TORFL'], 'Kenya': ['English/Swahili', 'IELTS/TOEFL'],
+    'Kiribati': ['English', 'IELTS/TOEFL'], 'Kuwait': ['Arabic', null], 'Kyrgyzstan': ['Kyrgyz/Russian', 'TORFL'],
+    'Laos': ['Lao', null], 'Latvia': ['Latvian', null], 'Lebanon': ['Arabic', null],
+    'Lesotho': ['English', 'IELTS/TOEFL'], 'Liberia': ['English', 'IELTS/TOEFL'], 'Libya': ['Arabic', null],
+    'Liechtenstein': ['German', 'TestDaF/Goethe-Zertifikat'], 'Lithuania': ['Lithuanian', null], 'Luxembourg': ['Luxembourgish/French/German', 'DELF-DALF / Goethe-Zertifikat'],
+    'Madagascar': ['French', 'DELF/DALF'], 'Malawi': ['English', 'IELTS/TOEFL'], 'Malaysia': ['Malay/English', 'IELTS/TOEFL'],
+    'Maldives': ['Dhivehi', null], 'Mali': ['French', 'DELF/DALF'], 'Malta': ['English', 'IELTS/TOEFL'],
+    'Marshall Islands': ['English', 'IELTS/TOEFL'], 'Mauritania': ['Arabic', null], 'Mauritius': ['English/French', 'IELTS/TOEFL'],
+    'Mexico': ['Spanish', 'DELE/SIELE'], 'Micronesia': ['English', 'IELTS/TOEFL'], 'Moldova': ['Romanian', null],
+    'Mongolia': ['Mongolian', null], 'Montenegro': ['Montenegrin', null], 'Morocco': ['Arabic/French', 'DELF/DALF'],
+    'Mozambique': ['Portuguese', 'CAPLE'], 'Myanmar': ['Burmese', null], 'Namibia': ['English', 'IELTS/TOEFL'],
+    'Nauru': ['English', 'IELTS/TOEFL'], 'Nepal': ['Nepali', null], 'Netherlands': ['Dutch', 'NT2'],
+    'New Zealand': ['English', 'IELTS/TOEFL'], 'Nicaragua': ['Spanish', 'DELE/SIELE'], 'Niger': ['French', 'DELF/DALF'],
+    'Nigeria': ['English', 'IELTS/TOEFL'], 'North Macedonia': ['Macedonian', null], 'Norway': ['Norwegian', null],
+    'Oman': ['Arabic', null], 'Pakistan': ['Urdu/English', 'IELTS/TOEFL'], 'Palau': ['English', 'IELTS/TOEFL'],
+    'Palestine': ['Arabic', null], 'Panama': ['Spanish', 'DELE/SIELE'], 'Papua New Guinea': ['English', 'IELTS/TOEFL'],
+    'Paraguay': ['Spanish', 'DELE/SIELE'], 'Peru': ['Spanish', 'DELE/SIELE'], 'Philippines': ['Filipino/English', 'IELTS/TOEFL'],
+    'Poland': ['Polish', null], 'Portugal': ['Portuguese', 'CAPLE'], 'Qatar': ['Arabic', null],
+    'Romania': ['Romanian', null], 'Russia': ['Russian', 'TORFL'], 'Rwanda': ['English/French', 'IELTS/TOEFL'],
+    'Saint Kitts and Nevis': ['English', 'IELTS/TOEFL'], 'Saint Lucia': ['English', 'IELTS/TOEFL'], 'Saint Vincent and the Grenadines': ['English', 'IELTS/TOEFL'],
+    'Samoa': ['English', 'IELTS/TOEFL'], 'San Marino': ['Italian', 'CILS/CELI'], 'Sao Tome and Principe': ['Portuguese', 'CAPLE'],
+    'Saudi Arabia': ['Arabic', null], 'Senegal': ['French', 'DELF/DALF'], 'Serbia': ['Serbian', null],
+    'Seychelles': ['English/French', 'IELTS/TOEFL'], 'Sierra Leone': ['English', 'IELTS/TOEFL'], 'Singapore': ['English', 'IELTS/TOEFL'],
+    'Slovakia': ['Slovak', null], 'Slovenia': ['Slovenian', null], 'Solomon Islands': ['English', 'IELTS/TOEFL'],
+    'Somalia': ['Somali/Arabic', null], 'South Africa': ['English', 'IELTS/TOEFL'], 'South Korea': ['Korean', 'TOPIK'],
+    'South Sudan': ['English', 'IELTS/TOEFL'], 'Spain': ['Spanish', 'DELE/SIELE'], 'Sri Lanka': ['Sinhala/Tamil', null],
+    'Sudan': ['Arabic', null], 'Suriname': ['Dutch', 'NT2'], 'Sweden': ['Swedish', null],
+    'Switzerland': ['German/French/Italian', 'Goethe-Zertifikat / DELF-DALF'], 'Syria': ['Arabic', null], 'Tajikistan': ['Tajik/Russian', 'TORFL'],
+    'Tanzania': ['Swahili/English', 'IELTS/TOEFL'], 'Thailand': ['Thai', null], 'Togo': ['French', 'DELF/DALF'],
+    'Tonga': ['English', 'IELTS/TOEFL'], 'Trinidad and Tobago': ['English', 'IELTS/TOEFL'], 'Tunisia': ['Arabic/French', 'DELF/DALF'],
+    'Turkey': ['Turkish', null], 'Turkmenistan': ['Turkmen/Russian', 'TORFL'], 'Tuvalu': ['English', 'IELTS/TOEFL'],
+    'Uganda': ['English', 'IELTS/TOEFL'], 'Ukraine': ['Ukrainian', null], 'United Arab Emirates': ['Arabic', null],
+    'United Kingdom': ['English', 'IELTS/TOEFL'], 'United States': ['English', 'IELTS/TOEFL'], 'Vanuatu': ['English/French', 'IELTS/TOEFL'],
+    'Yemen': ['Arabic', null]
+  };
+
+  /* Tracks the label currently shown for the language field, so the results
+     snapshot below can say "Japanese proficiency" instead of a generic label. */
+  var currentLangLabel = 'Language proficiency';
+
+  function updateLanguageSection(){
+    var countryRaw = document.getElementById('country').value;
+    var titleEl = document.getElementById('langSectionTitle');
+    var descEl = document.getElementById('langSectionDesc');
+    var labelEl = document.getElementById('langFieldLabel');
+    var hintEl = document.getElementById('langFieldHint');
+
+    if(!countryRaw){
+      titleEl.textContent = 'Language level';
+      descEl.textContent = 'Pick a destination country above to see the language it counts here.';
+      labelEl.textContent = 'Current language proficiency';
+      hintEl.textContent = 'Select a destination country first.';
+      currentLangLabel = 'Language proficiency';
+      return;
+    }
+
+    var countryName = countryRaw.split('|')[0];
+    var info = LANGUAGE_BY_COUNTRY[countryName] || ['the local language', null];
+    var langName = info[0];
+    var testName = info[1];
+
+    titleEl.textContent = langName + ' level';
+    descEl.textContent = 'Your comfort with ' + langName + ', ' + countryName + "'s main language of instruction.";
+    labelEl.textContent = 'Current ' + langName + ' proficiency';
+    hintEl.textContent = testName
+      ? ('Roughly equivalent to ' + testName + ', framed here as CEFR-style levels (A1–C2).')
+      : 'Framed as CEFR-style levels (A1–C2) — no single standardized test dominates for this language.';
+    currentLangLabel = langName + ' proficiency';
+  }
+
+  document.getElementById('country').addEventListener('change', updateLanguageSection);
+  updateLanguageSection();
 
   /* Country list mirrored from the <select id="country"> options, used so the
      AI suggestion can score every destination on the same profile and compare. */
@@ -1048,6 +1156,7 @@
     var countryParts = countryRaw.split('|');
     var countryName = countryParts[0];
     var countryMod = parseFloat(countryParts[1]);
+    updateLanguageSection();
 
     var earningsNorm = Math.max(0, Math.min(1, earningsRaw / 3000));
     var healthNorm = (healthVal - 1) / 4;
@@ -1094,7 +1203,7 @@
 
     var factorMeta = [
       { key:'edu', label:'Educational foundation', value:eduVal, color:'var(--teal)' },
-      { key:'lang', label:'Language proficiency', value:langVal, color:'var(--amber)' },
+      { key:'lang', label:currentLangLabel, value:langVal, color:'var(--amber)' },
       { key:'earnings', label:'Financial readiness', value:earningsNorm, color:'var(--teal)' },
       { key:'target', label:'Ambition alignment', value:targetVal, color:'var(--amber)' },
       { key:'health', label:'Health resilience', value:healthNorm, color:'var(--teal)' },
