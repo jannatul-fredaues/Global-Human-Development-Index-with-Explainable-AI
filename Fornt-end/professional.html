@@ -622,6 +622,7 @@
               <option value="uk">United Kingdom</option>
               <option value="usa">United States</option>
               <option value="japan">Japan</option>
+              <option value="south-korea">South Korea</option>
               <option value="uae">United Arab Emirates</option>
               <option value="netherlands">Netherlands</option>
               <option value="other">Other</option>
@@ -629,16 +630,9 @@
           </div>
 
           <div class="field">
-            <label for="language">Language level <span class="num">for that country</span></label>
-            <select id="language" required>
-              <option value="" disabled selected>Select your proficiency</option>
-              <option value="none">None / not started</option>
-              <option value="a1">A1 — Beginner</option>
-              <option value="a2">A2 — Elementary</option>
-              <option value="b1">B1 — Intermediate</option>
-              <option value="b2">B2 — Upper intermediate</option>
-              <option value="c1">C1 — Advanced</option>
-              <option value="c2">C2 — Fluent / native-like</option>
+            <label for="language" id="language-label">Language level <span class="num">select a country first</span></label>
+            <select id="language" required disabled>
+              <option value="" disabled selected>Select a destination country first</option>
             </select>
           </div>
 
@@ -752,8 +746,7 @@
 
   var labels = {
     education:{'high-school':'High school / secondary','diploma':'Diploma / vocational','bachelor':"Bachelor's degree",'master':"Master's degree",'phd':'PhD / doctorate'},
-    country:{'germany':'Germany','canada':'Canada','australia':'Australia','uk':'United Kingdom','usa':'United States','japan':'Japan','uae':'United Arab Emirates','netherlands':'Netherlands','other':'Other'},
-    language:{'none':'None / not started','a1':'A1 — Beginner','a2':'A2 — Elementary','b1':'B1 — Intermediate','b2':'B2 — Upper intermediate','c1':'C1 — Advanced','c2':'C2 — Fluent'},
+    country:{'germany':'Germany','canada':'Canada','australia':'Australia','uk':'United Kingdom','usa':'United States','japan':'Japan','south-korea':'South Korea','uae':'United Arab Emirates','netherlands':'Netherlands','other':'Other'},
     wantedEducation:{'none':'Not pursuing further education','certificate':'Certificate / short course','diploma':'Diploma','bachelor':"Bachelor's degree",'master':"Master's degree",'phd':'PhD / doctorate'},
     health:{'excellent':'Excellent','good':'Good','fair':'Fair','poor':'Needs ongoing care'},
     major:{'computer-science':'Computer Science / IT','engineering':'Engineering','business-management':'Business / Management','medicine-health':'Medicine / Health Sciences','natural-sciences':'Natural Sciences','social-sciences-humanities':'Social Sciences / Humanities','arts-design':'Arts / Design','education':'Education','other':'Other'}
@@ -793,13 +786,61 @@
     return { score: Math.min(bestScore, 100), match: bestMatch };
   }
 
-  var langIndex = {'none':0,'a1':1,'a2':2,'b1':3,'b2':4,'c1':5,'c2':6};
-  var langNameByIndex = ['None','A1','A2','B1','B2','C1','C2'];
+  /* ---------------------------------------------------------------
+     Language proficiency scales. Each country asks about ITS OWN
+     language using the test/framework people actually use for it,
+     rather than one generic scale for every destination.
+     `percent` normalizes every scale to a common 0-100 readiness
+     value so countries can still be compared against each other.
+  ----------------------------------------------------------------- */
+  var langScales = {
+    cefr: {
+      options:[
+        {value:'none', text:'None / not started'},
+        {value:'a1', text:'A1 — Beginner'},
+        {value:'a2', text:'A2 — Elementary'},
+        {value:'b1', text:'B1 — Intermediate'},
+        {value:'b2', text:'B2 — Upper intermediate'},
+        {value:'c1', text:'C1 — Advanced'},
+        {value:'c2', text:'C2 — Fluent / native-like'}
+      ],
+      percent:{'none':0,'a1':15,'a2':30,'b1':50,'b2':65,'c1':82,'c2':100}
+    },
+    jlpt: {
+      options:[
+        {value:'none', text:'None / not started'},
+        {value:'n5', text:'N5 — Basic'},
+        {value:'n4', text:'N4 — Elementary'},
+        {value:'n3', text:'N3 — Intermediate'},
+        {value:'n2', text:'N2 — Upper intermediate'},
+        {value:'n1', text:'N1 — Advanced / fluent'}
+      ],
+      percent:{'none':0,'n5':20,'n4':35,'n3':55,'n2':75,'n1':95}
+    },
+    topik: {
+      options:[
+        {value:'none', text:'None / not started'},
+        {value:'topik1', text:'TOPIK I, Level 1 — Basic'},
+        {value:'topik2', text:'TOPIK I, Level 2 — Elementary'},
+        {value:'topik3', text:'TOPIK II, Level 3 — Intermediate'},
+        {value:'topik4', text:'TOPIK II, Level 4 — Upper intermediate'},
+        {value:'topik5', text:'TOPIK II, Level 5 — Advanced'},
+        {value:'topik6', text:'TOPIK II, Level 6 — Fluent'}
+      ],
+      percent:{'none':0,'topik1':15,'topik2':30,'topik3':50,'topik4':62,'topik5':80,'topik6':100}
+    }
+  };
 
   /* ---------------------------------------------------------------
      Illustrative country dataset — approximate figures for a course
      demo, not verified immigration/salary data.
-     langReq: minimum CEFR index a newcomer typically needs day-to-day
+     language: the language asked about for this destination
+     langScale: which scale above is used to assess it
+     langReqPercent/langReqLabel: minimum readiness a newcomer
+       typically needs day-to-day, on that language's own scale
+     langGroup: countries sharing this key are treated as needing
+       the same language (e.g. the English-speaking group), so a
+       proficiency entered for one of them carries over to the rest
      incomeByEdu: typical monthly USD income by education tier
      eduStrength: how well each country supports that further-study goal (0-1)
      healthScore: relative healthcare access/quality (0-1)
@@ -807,64 +848,109 @@
      roles: likely entry posts by the applicant's *current* education tier
   ----------------------------------------------------------------- */
   var countries = [
-    { key:'germany', name:'Germany', langReq:3,
+    { key:'germany', name:'Germany', language:'German', langScale:'cefr', langGroup:'german', langReqPercent:50, langReqLabel:'B1',
       incomeByEdu:{'high-school':1900,'diploma':2400,'bachelor':3400,'master':4200,'phd':5200},
       eduStrength:{'none':1,'certificate':0.8,'diploma':0.85,'bachelor':0.9,'master':0.95,'phd':0.9},
       healthScore:0.92, stressIndex:0.45,
       roles:{'high-school':['Warehouse & Logistics Assistant','Skilled Trade Apprentice'],'diploma':['Technician (Mechatronics/IT)','Vocational Specialist'],'bachelor':['Software Engineer','Mechanical Engineer'],'master':['Data Analyst','R&D Engineer'],'phd':['Research Scientist','University Postdoc']} },
 
-    { key:'canada', name:'Canada', langReq:3,
+    { key:'canada', name:'Canada', language:'English', langScale:'cefr', langGroup:'english', langReqPercent:50, langReqLabel:'B1',
       incomeByEdu:{'high-school':2100,'diploma':2600,'bachelor':3500,'master':4300,'phd':5000},
       eduStrength:{'none':1,'certificate':0.85,'diploma':0.9,'bachelor':0.9,'master':0.9,'phd':0.85},
       healthScore:0.9, stressIndex:0.4,
       roles:{'high-school':['Retail & Customer Service Lead','Construction Technician'],'diploma':['IT Support Specialist','Healthcare Aide'],'bachelor':['Business Analyst','Software Developer'],'master':['Project Manager','Data Scientist'],'phd':['Research Associate','Policy Analyst']} },
 
-    { key:'australia', name:'Australia', langReq:3,
+    { key:'australia', name:'Australia', language:'English', langScale:'cefr', langGroup:'english', langReqPercent:50, langReqLabel:'B1',
       incomeByEdu:{'high-school':2300,'diploma':2900,'bachelor':3800,'master':4500,'phd':5100},
       eduStrength:{'none':1,'certificate':0.85,'diploma':0.85,'bachelor':0.85,'master':0.85,'phd':0.8},
       healthScore:0.88, stressIndex:0.38,
       roles:{'high-school':['Hospitality Supervisor','Trades Assistant'],'diploma':['Civil Engineering Technician','Aged Care Worker'],'bachelor':['Civil Engineer','Marketing Coordinator'],'master':['Financial Analyst','UX Designer'],'phd':['Research Fellow','Senior Scientist']} },
 
-    { key:'uk', name:'United Kingdom', langReq:3,
+    { key:'uk', name:'United Kingdom', language:'English', langScale:'cefr', langGroup:'english', langReqPercent:50, langReqLabel:'B1',
       incomeByEdu:{'high-school':1800,'diploma':2200,'bachelor':3100,'master':3900,'phd':4600},
       eduStrength:{'none':1,'certificate':0.8,'diploma':0.8,'bachelor':0.85,'master':0.9,'phd':0.9},
       healthScore:0.8, stressIndex:0.55,
       roles:{'high-school':['Retail Team Member','Admin Assistant'],'diploma':['Junior IT Technician','Care Assistant'],'bachelor':['Business Development Associate','Junior Developer'],'master':['Consultant','Data Analyst'],'phd':['Research Scientist','Lecturer (Fixed-term)']} },
 
-    { key:'usa', name:'United States', langReq:3,
+    { key:'usa', name:'United States', language:'English', langScale:'cefr', langGroup:'english', langReqPercent:50, langReqLabel:'B1',
       incomeByEdu:{'high-school':2200,'diploma':2700,'bachelor':4200,'master':5300,'phd':6200},
       eduStrength:{'none':1,'certificate':0.8,'diploma':0.75,'bachelor':0.85,'master':0.9,'phd':0.9},
       healthScore:0.65, stressIndex:0.7,
       roles:{'high-school':['Logistics Coordinator','Sales Associate'],'diploma':['IT Support Technician','Medical Assistant'],'bachelor':['Software Engineer','Financial Analyst'],'master':['Product Manager','Data Scientist'],'phd':['Research Scientist','R&D Lead']} },
 
-    { key:'japan', name:'Japan', langReq:4,
+    { key:'japan', name:'Japan', language:'Japanese', langScale:'jlpt', langGroup:'japanese', langReqPercent:55, langReqLabel:'N3',
       incomeByEdu:{'high-school':1700,'diploma':2100,'bachelor':2900,'master':3500,'phd':4100},
       eduStrength:{'none':1,'certificate':0.7,'diploma':0.7,'bachelor':0.75,'master':0.8,'phd':0.85},
       healthScore:0.93, stressIndex:0.75,
       roles:{'high-school':['Factory Line Technician','Hospitality Staff'],'diploma':['CAD Technician','IT Helpdesk'],'bachelor':['Software Engineer','Trading Company Associate'],'master':['R&D Engineer','Business Analyst'],'phd':['Research Scientist','University Researcher']} },
 
-    { key:'uae', name:'United Arab Emirates', langReq:1,
+    { key:'south-korea', name:'South Korea', language:'Korean', langScale:'topik', langGroup:'korean', langReqPercent:50, langReqLabel:'TOPIK II Level 3',
+      incomeByEdu:{'high-school':1600,'diploma':2000,'bachelor':2800,'master':3400,'phd':4000},
+      eduStrength:{'none':1,'certificate':0.65,'diploma':0.65,'bachelor':0.75,'master':0.85,'phd':0.85},
+      healthScore:0.9, stressIndex:0.72,
+      roles:{'high-school':['Factory Line Technician','Hospitality Staff'],'diploma':['IT Helpdesk','Technical Support Specialist'],'bachelor':['Software Engineer','Trading Company Associate'],'master':['R&D Engineer','Business Analyst'],'phd':['Research Scientist','University Researcher']} },
+
+    { key:'uae', name:'United Arab Emirates', language:'Arabic', langScale:'cefr', langGroup:'arabic', langReqPercent:15, langReqLabel:'A1',
       incomeByEdu:{'high-school':1500,'diploma':2200,'bachelor':3600,'master':4600,'phd':5400},
       eduStrength:{'none':1,'certificate':0.6,'diploma':0.55,'bachelor':0.6,'master':0.65,'phd':0.55},
       healthScore:0.75, stressIndex:0.6,
       roles:{'high-school':['Retail Supervisor','Hospitality Associate'],'diploma':['Technical Support Specialist','Construction Supervisor'],'bachelor':['Business Development Executive','Civil Engineer'],'master':['Finance Manager','Project Manager'],'phd':['Senior Consultant','Research Advisor']} },
 
-    { key:'netherlands', name:'Netherlands', langReq:2,
+    { key:'netherlands', name:'Netherlands', language:'Dutch', langScale:'cefr', langGroup:'dutch', langReqPercent:30, langReqLabel:'A2',
       incomeByEdu:{'high-school':1900,'diploma':2400,'bachelor':3400,'master':4100,'phd':4800},
       eduStrength:{'none':1,'certificate':0.85,'diploma':0.85,'bachelor':0.9,'master':0.9,'phd':0.9},
       healthScore:0.9, stressIndex:0.42,
       roles:{'high-school':['Logistics Assistant','Retail Team Lead'],'diploma':['IT Support Specialist','Lab Technician'],'bachelor':['Software Developer','Marketing Analyst'],'master':['Data Analyst','Policy Officer'],'phd':['Research Scientist','Postdoctoral Researcher']} }
   ];
 
+  var countryByKey = {};
+  countries.forEach(function(c){ countryByKey[c.key] = c; });
+
+  /* Populate the Language select to match the destination's own
+     language + test scale, and update the label accordingly. */
+  var languageSelectEl = document.getElementById('language');
+  var languageLabelEl = document.getElementById('language-label');
+
+  function populateLanguageField(countryKey){
+    var c = countryByKey[countryKey];
+    if(!c){
+      languageSelectEl.disabled = true;
+      languageSelectEl.innerHTML = '<option value="" disabled selected>Select a destination country first</option>';
+      languageLabelEl.innerHTML = 'Language level <span class="num">select a country first</span>';
+      return;
+    }
+    var scale = langScales[c.langScale];
+    languageSelectEl.disabled = false;
+    languageSelectEl.innerHTML = '<option value="" disabled selected>Select your ' + c.language + ' proficiency</option>' +
+      scale.options.map(function(o){ return '<option value="' + o.value + '">' + o.text + '</option>'; }).join('');
+    languageLabelEl.innerHTML = c.language + ' level <span class="num">for ' + c.name + ' (' + c.langReqLabel + ' typically expected)</span>';
+  }
+
+  document.getElementById('country').addEventListener('change', function(){
+    populateLanguageField(this.value);
+  });
+
   function clamp(n, lo, hi){ return Math.max(lo, Math.min(hi, n)); }
 
   function scoreCountry(profile, c){
-    /* Language fit: does the user's level meet the country's typical requirement? */
-    var langGap = c.langReq - profile.langLevel;
-    var langScore = langGap <= 0 ? 100 : clamp(100 - langGap * 26, 0, 100);
-    var langReason = langGap <= 0
-      ? 'Your ' + langNameByIndex[profile.langLevel] + ' level already meets the ' + langNameByIndex[c.langReq] + ' typically expected here.'
-      : 'This market usually expects around ' + langNameByIndex[c.langReq] + '; your ' + langNameByIndex[profile.langLevel] + ' leaves a gap to close.';
+    /* Language fit: we only assessed proficiency in the language of the
+       country the user actually picked in the "Language level" field
+       (profile.langGroup). For a destination that needs the same
+       language (e.g. any English-speaking country if English was
+       assessed), compare directly against that country's own
+       requirement. For a destination needing a different language we
+       have no data on, treat it as neutral rather than guessing. */
+    var langScore, langReason;
+    if(c.langGroup === profile.langGroup){
+      var gap = c.langReqPercent - profile.langPercent;
+      langScore = gap <= 0 ? 100 : clamp(100 - gap * 1.3, 0, 100);
+      langReason = gap <= 0
+        ? 'Your ' + profile.langLevelLabel + ' ' + c.language + ' already meets the ' + c.langReqLabel + ' typically expected here.'
+        : 'This market usually expects around ' + c.langReqLabel + ' ' + c.language + '; your ' + profile.langLevelLabel + ' leaves a gap to close.';
+    } else {
+      langScore = 55;
+      langReason = 'You only entered a proficiency level for ' + profile.langLanguage + ', not ' + c.language + ', so this factor is treated as neutral for ' + c.name + '.';
+    }
 
     /* Earnings fit: does the country's typical pay for this education tier meet expectations? */
     var typicalIncome = c.incomeByEdu[profile.education] || c.incomeByEdu['bachelor'];
@@ -955,11 +1041,16 @@
       return;
     }
 
+    var chosenCountryData = countryByKey[countryEl.value];
+    var chosenScale = langScales[chosenCountryData.langScale];
     var profile = {
       education: educationEl.value,
       earnings: Number(earningsEl.value) || 1,
       chosenCountry: countryEl.value,
-      langLevel: langIndex[languageEl.value] != null ? langIndex[languageEl.value] : 0,
+      langGroup: chosenCountryData.langGroup,
+      langLanguage: chosenCountryData.language,
+      langPercent: chosenScale.percent[languageEl.value] != null ? chosenScale.percent[languageEl.value] : 0,
+      langLevelLabel: languageEl.options[languageEl.selectedIndex].text.split(' — ')[0],
       wantedEducation: wantedEdEl.value,
       health: healthEl.value,
       stress: Number(stressEl.value),
@@ -983,7 +1074,7 @@
     document.getElementById('verdict-roles').textContent = topRoles.join('  •  ');
 
     var chosenMatch = results.find(function(r){ return r.country.key === profile.chosenCountry; });
-    var narrative = 'Based on your ' + labels.education[profile.education].toLowerCase() + ' in ' + labels.major[profile.major].toLowerCase() + ', your ' + languageEl.options[languageEl.selectedIndex].text.split(' — ')[0] + ' language level, and wanting to work as a ' + profile.desiredRole + ', ' + top.country.name + ' comes out as the strongest overall fit at ' + scoreRounded + '%.';
+    var narrative = 'Based on your ' + labels.education[profile.education].toLowerCase() + ' in ' + labels.major[profile.major].toLowerCase() + ', your ' + profile.langLevelLabel + ' ' + profile.langLanguage + ' level, and wanting to work as a ' + profile.desiredRole + ', ' + top.country.name + ' comes out as the strongest overall fit at ' + scoreRounded + '%.';
     if(chosenMatch && chosenMatch.country.key !== top.country.key){
       narrative += ' Your originally selected country, ' + chosenMatch.country.name + ', scored ' + Math.round(chosenMatch.overall) + '% — still workable, but ' + top.country.name + ' edges ahead mainly on the factors below.';
     } else if(chosenMatch && chosenMatch.country.key === top.country.key){
